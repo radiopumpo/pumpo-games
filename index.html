@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Pumpo Games — Play the System</title>
+<link rel="icon" type="image/png" href="https://radiopumpo.github.io/radiopumpologo.png">
+<link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Space+Mono:wght@400;700&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#060608; --bg2:#0c0c10; --bg3:#121218; --bg4:#18181f;
+  --pink:#ff0080; --cyan:#40e0d0; --amber:#ff9500; --violet:#a855f7;
+  --green:#00e676; --red:#e24b4a;
+  --glow-pink:0 0 10px rgba(255,0,128,.7),0 0 30px rgba(255,0,128,.3),0 0 60px rgba(255,0,128,.1);
+  --glow-cyan:0 0 10px rgba(64,224,208,.7),0 0 30px rgba(64,224,208,.3);
+  --glow-amber:0 0 10px rgba(255,149,0,.7),0 0 30px rgba(255,149,0,.3);
+  --text:#f0ede6; --muted:#5a5a6a; --dim:#1e1e28;
+  --border:rgba(255,255,255,0.06); --border2:rgba(255,255,255,0.12);
+  --mono:'Space Mono',monospace; --sans:'Rajdhani',sans-serif; --display:'Black Ops One',cursive;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;background-image:radial-gradient(ellipse at 50% 40%,#0d0d14 0%,#060608 70%);}
+body::before{content:'';position:fixed;inset:0;z-index:9000;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.04) 2px,rgba(0,0,0,0.04) 4px);}
+body::after{content:'';position:fixed;inset:0;z-index:8999;pointer-events:none;opacity:.025;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:128px 128px;}
+.vignette{position:fixed;inset:0;z-index:8998;pointer-events:none;background:radial-gradient(ellipse 85% 85% at 50% 50%,transparent 60%,rgba(0,0,0,.6) 100%);}
+
+/* NAV */
+.nav{position:fixed;top:0;left:0;right:0;z-index:500;display:flex;justify-content:space-between;align-items:center;padding:0 1.5rem;height:52px;background:rgba(6,6,8,.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);}
+.nav-brand{font-family:var(--display);font-size:1rem;letter-spacing:1px;text-decoration:none;display:flex;align-items:baseline;gap:.3rem;}
+.nav-brand .nb1{color:var(--pink);text-shadow:var(--glow-pink);}
+.nav-brand .nb2{color:var(--cyan);}
+.nav-links{display:flex;gap:6px;align-items:center;}
+.nav-link{font-family:var(--mono);font-size:.58rem;letter-spacing:.1em;color:var(--muted);text-decoration:none;border:1px solid var(--border2);padding:3px 9px;border-radius:3px;transition:.2s;text-transform:uppercase;}
+.nav-link:hover{border-color:var(--cyan);color:var(--cyan);text-shadow:var(--glow-cyan);}
+.nav-live{font-family:var(--mono);font-size:.55rem;letter-spacing:.12em;padding:3px 9px;border-radius:3px;border:1px solid rgba(255,0,128,.35);color:var(--pink);background:rgba(255,0,128,.06);animation:livePulse 2s infinite;}
+@keyframes livePulse{0%,100%{opacity:1}50%{opacity:.6}}
+
+/* HERO */
+.hero{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6rem 1.5rem 4rem;text-align:center;overflow:hidden;}
+#particleCanvas{position:absolute;inset:0;z-index:0;pointer-events:none;}
+.hero-inner{position:relative;z-index:1;}
+.hero-eyebrow{font-family:var(--mono);font-size:.6rem;letter-spacing:.35em;text-transform:uppercase;color:var(--muted);margin-bottom:1.5rem;display:flex;align-items:center;gap:12px;}
+.hero-eyebrow::before,.hero-eyebrow::after{content:'';flex:1;height:1px;background:linear-gradient(to right,transparent,rgba(255,0,128,.3),transparent);}
+
+/* WAVE GLITCH TITLE */
+.hero-title{font-family:var(--display);font-size:clamp(44px,9vw,96px);line-height:.9;letter-spacing:2px;margin-bottom:1.25rem;}
+.title-word{display:block;position:relative;animation:waveCycle var(--dur,8s) var(--delay,0s) infinite;}
+.title-word.w1{color:var(--pink);--dur:7s;--delay:0s;}
+.title-word.w2{color:var(--text);--dur:7s;--delay:.18s;font-size:.55em;letter-spacing:5px;}
+.title-word.w3{color:var(--cyan);--dur:7s;--delay:.36s;}
+@keyframes waveCycle{
+  0%,79%,100%{text-shadow:none;transform:none;filter:none;}
+  80%{transform:translate(-3px,0);text-shadow:3px 0 var(--cyan),-3px 0 var(--pink);}
+  81%{transform:translate(3px,0);text-shadow:-3px 0 var(--cyan),3px 0 var(--pink);}
+  82%{transform:translate(-2px,0);text-shadow:2px 0 var(--amber);}
+  83%{transform:none;filter:brightness(1.4);}
+  84%{transform:translate(1px,0);text-shadow:-1px 0 var(--violet);}
+  85%{transform:none;text-shadow:none;filter:none;}
+}
+
+.hero-tagline{font-family:var(--mono);font-size:.72rem;letter-spacing:.18em;color:var(--muted);text-transform:uppercase;margin-bottom:.75rem;line-height:1.6;}
+.hero-sub{font-size:clamp(13px,1.4vw,16px);color:var(--muted);font-weight:600;line-height:1.8;max-width:500px;margin:0 auto 2.5rem;}
+.hero-sub strong{color:var(--text);}
+.hero-cta-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:1.25rem;}
+.cta-primary{font-family:var(--display);font-size:.85rem;letter-spacing:1px;padding:.75rem 2rem;border-radius:3px;background:var(--pink);color:#fff;border:none;cursor:pointer;text-decoration:none;transition:all .2s;box-shadow:var(--glow-pink);position:relative;overflow:hidden;}
+.cta-primary::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.15),transparent);transition:left .4s;}
+.cta-primary:hover::before{left:100%;}
+.cta-primary:hover{transform:translateY(-2px);box-shadow:0 0 20px rgba(255,0,128,.8),0 0 60px rgba(255,0,128,.3);}
+.cta-secondary{font-family:var(--mono);font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;padding:.75rem 1.25rem;border-radius:3px;border:1px solid rgba(64,224,208,.3);color:var(--cyan);text-decoration:none;transition:.2s;}
+.cta-secondary:hover{border-color:var(--cyan);box-shadow:var(--glow-cyan);}
+.coin-insert{font-family:var(--mono);font-size:.65rem;letter-spacing:.2em;color:var(--amber);text-transform:uppercase;animation:coinBlink 1.4s step-end infinite;text-shadow:var(--glow-amber);}
+@keyframes coinBlink{0%,49%{opacity:1}50%,100%{opacity:0}}
+
+/* TICKER */
+.ticker{width:100%;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--bg2);overflow:hidden;position:relative;z-index:1;padding:.6rem 0;}
+.ticker-inner{display:flex;gap:3rem;white-space:nowrap;animation:tickerScroll 30s linear infinite;font-family:var(--mono);font-size:.62rem;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;}
+.ticker-inner:hover{animation-play-state:paused;}
+.ticker-item{display:flex;align-items:center;gap:.5rem;flex-shrink:0;}
+.ticker-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+@keyframes tickerScroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+/* MANIFESTO */
+.manifesto{position:relative;z-index:1;padding:4rem 1.5rem;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:linear-gradient(180deg,transparent,rgba(255,0,128,.025),transparent);text-align:center;}
+.manifesto-quote{font-family:var(--display);font-size:clamp(16px,2.8vw,26px);color:var(--text);line-height:1.4;max-width:640px;margin:0 auto 1rem;}
+.hl-p{color:var(--pink);text-shadow:var(--glow-pink);}
+.hl-c{color:var(--cyan);text-shadow:var(--glow-cyan);}
+.manifesto-body{font-size:13px;color:var(--muted);font-weight:600;line-height:1.8;max-width:520px;margin:0 auto;}
+
+/* SECTIONS */
+.section{position:relative;z-index:1;padding:5rem 1.5rem;max-width:1100px;margin:0 auto;}
+.section-eyebrow{font-family:var(--mono);font-size:.6rem;letter-spacing:.25em;text-transform:uppercase;color:var(--muted);margin-bottom:.65rem;display:flex;align-items:center;gap:10px;}
+.section-eyebrow::after{content:'';flex:1;height:1px;background:var(--border2);}
+.section-title{font-family:var(--display);font-size:clamp(22px,4vw,40px);color:var(--text);line-height:1.05;}
+.section-title .hl{color:var(--pink);}
+.section-sub{font-size:13px;color:var(--muted);font-weight:600;line-height:1.7;max-width:480px;margin-top:.5rem;margin-bottom:2rem;}
+
+/* ARCADE CARDS */
+.games-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px;}
+.arcade-card{background:var(--bg2);border:1px solid var(--border2);border-radius:4px;overflow:hidden;text-decoration:none;color:var(--text);display:flex;flex-direction:column;position:relative;transition:transform .2s,box-shadow .2s;box-shadow:inset 2px 0 0 rgba(255,255,255,.03),inset -2px 0 0 rgba(255,255,255,.03);}
+.arcade-card::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.03) 0%,transparent 40%);pointer-events:none;}
+.arcade-card:hover{transform:translateY(-4px);}
+.arcade-card:hover .card-screen{animation:screenFlicker .08s step-end 2;}
+@keyframes screenFlicker{0%,100%{opacity:1}50%{opacity:.88}}
+.card-screen{height:150px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;border-bottom:2px solid rgba(255,255,255,.06);}
+.card-screen::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 80% at 50% 50%,transparent 50%,rgba(0,0,0,.45) 100%);pointer-events:none;z-index:2;}
+.card-screen::before{content:'';position:absolute;inset:0;z-index:3;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.08) 3px,rgba(0,0,0,.08) 4px);}
+.card-screen-icon{font-size:62px;position:relative;z-index:1;filter:drop-shadow(0 0 20px currentColor);animation:iconFloat 4s ease-in-out infinite;}
+@keyframes iconFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.card-marquee{background:var(--bg3);border-top:1px solid var(--border2);border-bottom:1px solid var(--border2);padding:5px 12px;display:flex;justify-content:space-between;align-items:center;}
+.card-marquee-name{font-family:var(--display);font-size:.75rem;letter-spacing:1px;}
+.card-insert{font-family:var(--mono);font-size:.5rem;letter-spacing:.12em;color:var(--amber);text-transform:uppercase;animation:coinBlink 1.2s step-end infinite;}
+.card-body{padding:1rem 1.1rem;flex:1;display:flex;flex-direction:column;background:var(--bg2);}
+.card-tags{display:flex;gap:5px;margin-bottom:.65rem;flex-wrap:wrap;}
+.card-tag{font-family:var(--mono);font-size:.5rem;letter-spacing:.1em;padding:2px 7px;border-radius:2px;border:1px solid;text-transform:uppercase;}
+.card-concept{font-family:var(--mono);font-size:.55rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.5rem;}
+.card-desc{font-size:12px;color:var(--muted);font-weight:600;line-height:1.65;flex:1;margin-bottom:.85rem;}
+.card-tray{background:var(--bg3);border-top:1px solid var(--border);padding:.65rem 1.1rem;display:flex;align-items:center;justify-content:space-between;}
+.play-btn{font-family:var(--display);font-size:.65rem;letter-spacing:1px;padding:.4rem 1rem;border-radius:2px;border:none;cursor:pointer;text-decoration:none;transition:all .15s;display:inline-block;position:relative;overflow:hidden;}
+.play-btn::after{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.2),transparent);transition:left .3s;}
+.play-btn:hover::after{left:100%;}
+.card-meta{font-family:var(--mono);font-size:.55rem;color:var(--muted);letter-spacing:.06em;}
+
+/* ROADMAP */
+.roadmap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;}
+.roadmap-card{background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:1.1rem;position:relative;overflow:hidden;opacity:0;transform:translateY(14px);transition:opacity .4s ease,transform .4s ease;}
+.roadmap-card.visible{opacity:.62;transform:translateY(0);}
+.roadmap-card::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent,transparent 8px,rgba(255,255,255,.01) 8px,rgba(255,255,255,.01) 9px);}
+.roadmap-badge{font-family:var(--mono);font-size:.5rem;letter-spacing:.12em;padding:2px 8px;border-radius:2px;border:1px solid var(--border2);color:var(--muted);text-transform:uppercase;display:inline-block;margin-bottom:.65rem;}
+.roadmap-icon{font-size:26px;display:block;margin-bottom:.5rem;position:relative;z-index:1;}
+.roadmap-name{font-family:var(--display);font-size:.9rem;letter-spacing:.5px;color:var(--text);margin-bottom:.3rem;position:relative;z-index:1;}
+.roadmap-concept{font-family:var(--mono);font-size:.55rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.5rem;position:relative;z-index:1;}
+.roadmap-desc{font-size:11px;color:var(--muted);font-weight:600;line-height:1.65;margin-bottom:.75rem;position:relative;z-index:1;}
+.roadmap-hook{font-family:var(--mono);font-size:.55rem;color:var(--dim);border-top:1px solid var(--border);padding-top:.5rem;letter-spacing:.04em;line-height:1.55;position:relative;z-index:1;}
+
+/* NETWORK */
+.network-section{position:relative;z-index:1;padding:3rem 1.5rem 4rem;text-align:center;}
+.network-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:1.5rem;}
+.network-link{font-family:var(--mono);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;padding:.5rem 1rem;border-radius:3px;border:1px solid var(--border2);color:var(--muted);text-decoration:none;transition:.2s;display:flex;align-items:center;gap:6px;}
+.network-link:hover{border-color:var(--cyan);color:var(--cyan);text-shadow:var(--glow-cyan);}
+.network-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+
+/* FOOTER */
+.footer{position:relative;z-index:1;border-top:1px solid var(--border);background:var(--bg);padding:1.5rem;display:flex;flex-direction:column;align-items:center;gap:.65rem;text-align:center;}
+.footer-brand{font-family:var(--display);font-size:.9rem;letter-spacing:1px;}
+.footer-brand .fb1{color:var(--pink);text-shadow:var(--glow-pink);}
+.footer-brand .fb2{color:var(--cyan);}
+.footer-links{display:flex;gap:12px;}
+.footer-link{font-family:var(--mono);font-size:.58rem;letter-spacing:.08em;color:var(--muted);text-decoration:none;transition:.2s;text-transform:uppercase;}
+.footer-link:hover{color:var(--cyan);}
+.footer-copy{font-family:var(--mono);font-size:.55rem;color:var(--dim);letter-spacing:.08em;}
+
+@media(max-width:640px){
+  .hero-cta-row{flex-direction:column;align-items:center;}
+  .cta-primary,.cta-secondary{width:100%;max-width:280px;text-align:center;}
+  .nav-link:not(:last-child){display:none;}
+}
+</style>
+</head>
+<body>
+<div class="vignette"></div>
+
+<nav class="nav">
+  <a href="#" class="nav-brand"><span class="nb1">PUMPO</span>&nbsp;<span class="nb2">GAMES</span></a>
+  <div class="nav-links">
+    <span class="nav-live">● 3 LIVE</span>
+    <a href="#games"   class="nav-link">Games</a>
+    <a href="#roadmap" class="nav-link">Roadmap</a>
+    <a href="https://radiopumpo.github.io/pumpo-tools" class="nav-link">🛠 Tools</a>
+    <a href="https://radiopumpo.github.io"             class="nav-link">📻 Radio</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <canvas id="particleCanvas"></canvas>
+  <div class="hero-inner">
+    <div class="hero-eyebrow">Pumpo Network · Games Node · Est. 2025</div>
+    <h1 class="hero-title">
+      <span class="title-word w1">PLAY</span>
+      <span class="title-word w2">THE</span>
+      <span class="title-word w3">SYSTEM</span>
+    </h1>
+    <div class="hero-tagline">Simple rules · Emergent complexity · Real consequences</div>
+    <p class="hero-sub">These games model <strong>real systems</strong> — coordination failures, resource depletion, reputation collapse, market cascades. Play them and you will understand something about the world that textbooks will not tell you.</p>
+    <div class="hero-cta-row">
+      <a href="#games"   class="cta-primary">INSERT COIN</a>
+      <a href="#roadmap" class="cta-secondary">Coming Soon →</a>
+    </div>
+    <div class="coin-insert">▲ Press Start ▲</div>
+  </div>
+</section>
+
+<div class="ticker" aria-hidden="true"><div class="ticker-inner" id="tickerInner"></div></div>
+
+<div class="manifesto">
+  <div class="manifesto-quote">Every game here is a <span class="hl-p">working model</span> of something happening <span class="hl-c">right now.</span></div>
+  <p class="manifesto-body" style="margin-top:1rem;">Markets cascade. Resources collapse. Reputations compound. Majorities self-destruct. These are not metaphors — they are mechanics. Pumpo Games makes them playable so you can feel the logic before the stakes are real.</p>
+</div>
+
+<section class="section" id="games">
+  <div class="section-eyebrow">Live · Playable Now</div>
+  <h2 class="section-title">Current <span class="hl">Roster</span></h2>
+  <p class="section-sub">Three games. Three real systems. Each one teaches something you can only learn by playing.</p>
+  <div class="games-grid" id="gamesGrid"></div>
+</section>
+
+<section class="section" id="roadmap">
+  <div class="section-eyebrow">In Development</div>
+  <h2 class="section-title">The <span class="hl">Roadmap</span></h2>
+  <p class="section-sub">Four games in development. Each one models a different real system. Each one is simple to learn and hard to master.</p>
+  <div class="roadmap-grid" id="roadmapGrid"></div>
+</section>
+
+<div class="network-section">
+  <div class="section-eyebrow" style="justify-content:center;display:flex;">Pumpo Network</div>
+  <h2 class="section-title" style="font-size:clamp(20px,3vw,32px);text-align:center;">One <span class="hl">Ecosystem</span></h2>
+  <div class="network-row" id="networkRow"></div>
+</div>
+
+<footer class="footer">
+  <div class="footer-brand"><span class="fb1">PUMPO</span>&nbsp;<span class="fb2">GAMES</span></div>
+  <div class="footer-links" id="footerLinks"></div>
+  <div class="footer-copy">Pumpo Network · Open Source · Zero Backend · Play the System</div>
+</footer>
+
+<script>
+// ── DATA (edit to add games / roadmap entries) ──────────────────
+const LIVE_GAMES = [
+  { href:'hidden-coordination.html', icon:'⬡', iconColor:'#ff0080', accentColor:'#ff0080',
+    screenBg:'radial-gradient(ellipse at 50% 40%,rgba(255,0,128,.18),rgba(6,6,8,.9))',
+    name:'Hidden Coordination', concept:'Schelling Points · Majority Dynamics',
+    tags:[{l:'Game Theory',bc:'rgba(255,0,128,.4)',tc:'#ff0080'},{l:'Ghost Mode',bc:'rgba(255,255,255,.1)',tc:'#5a5a6a'}],
+    desc:'25 agents. 4 signals. No communication. Each round the dominant cluster survives — the rest face elimination. Read the field, track winning signals, align before the cull. Agents remember what worked. You should too.',
+    mode:'Solo + Ghost Match' },
+  { href:'pumpogrid.html', icon:'⬡', iconColor:'#40e0d0', accentColor:'#40e0d0',
+    screenBg:'radial-gradient(ellipse at 50% 40%,rgba(64,224,208,.15),rgba(6,6,8,.9))',
+    name:"Pumpo's Empire", concept:'Complex Systems · Node Networks',
+    tags:[{l:'Idle Builder',bc:'rgba(64,224,208,.35)',tc:'#40e0d0'},{l:'Emergent',bc:'rgba(255,255,255,.1)',tc:'#5a5a6a'}],
+    desc:'A living canvas of nodes that grow, connect, and crystallise into districts. White nodes swarm, cyan anchors, pink attracts, red destabilises. Watch a settlement become an empire. Emergence from simple rules at scale.',
+    mode:'Idle · Observatory Mode' },
+  { href:'notehunt.html', icon:'♪', iconColor:'#a855f7', accentColor:'#a855f7',
+    screenBg:'radial-gradient(ellipse at 50% 40%,rgba(168,85,247,.18),rgba(6,6,8,.9))',
+    name:'NoteHunt', concept:'Spatial Discovery · Music Exploration',
+    tags:[{l:'Music',bc:'rgba(168,85,247,.4)',tc:'#a855f7'},{l:'Scavenger Hunt',bc:'rgba(255,255,255,.1)',tc:'#5a5a6a'}],
+    desc:'Navigate a spatial map of sounds. Follow clues hidden in frequencies, rhythms, and genres to find the target track. Each hunt is different. The map rewards curiosity and penalises noise.',
+    mode:'Solo · Daily Hunt' },
+];
+
+const ROADMAP_GAMES = [
+  { icon:'⟂', ac:'#e24b4a', name:'The Minority Game', concept:'Contrarian Dynamics · Anti-Consensus',
+    desc:"The crowd is always wrong. Agents in the largest group are culled while the minority survives. Win by going against the flow before everyone else figures out which way it's going. Contracorriente. Anti-sistema.",
+    hook:'Companion to Hidden Coordination — same engine, inverted mechanic. When do you conform? When do you break?' },
+  { icon:'↯', ac:'#ff9500', name:'Market Cascade', concept:'Reflexivity · Herding Behaviour',
+    desc:"A price starts at 50. Your prediction and everyone else's moves it. If 70% predict Up, it rises — validating the prediction. You're not predicting the asset. You're predicting what other predictors will predict. This is how markets work.",
+    hook:'20 rounds. Cumulative accuracy score. Ghost mode replays your prediction sequence against new players.' },
+  { icon:'◎', ac:'#00e676', name:'The Commons', concept:'Tragedy of the Commons · Shared Resources',
+    desc:'A shared resource replenishes at 15% per round. Six agents each secretly extract 0-20 units. Overextraction signals panic. Panic triggers cascades. Collapse is almost inevitable. The question is whether you will be standing when it happens.',
+    hook:'Three scenarios: The Ocean (fishing), The Grid (power), The Fund (bank run). Same mechanic. Different stakes.' },
+  { icon:'◈', ac:'#40e0d0', name:'Reputation Engine', concept:'Iterated Trust · Network Dynamics',
+    desc:'30 rounds. Each round you are paired by reputation proximity. Cooperate (+3 each) or defect (+7 you, -5 them). Defectors spiral. Cooperators who punish once then forgive climb to 100. Most players find the optimal strategy around round 15. Some never do.',
+    hook:'Win condition: reach Reputation 100 first, or hold the highest score at round 30.' },
+];
+
+const NETWORK_LINKS = [
+  { href:'https://radiopumpo.github.io',              label:'📻 Radio Pumpo', dot:'#ff0080' },
+  { href:'https://radiopumpo.github.io/pumpo-tools',  label:'🛠 Pumpo Tools',  dot:'#40e0d0' },
+  { href:'https://radiopumpo.github.io/pumpotv',      label:'📺 PumpoTV',     dot:'#ff9500' },
+  { href:'#', label:'🎮 Pumpo Games ←', dot:'#ff0080', current:true },
+];
+
+const TICKER_ITEMS = [
+  {dot:'#ff0080',text:'HIDDEN COORDINATION · LIVE'},
+  {dot:'#40e0d0',text:"PUMPO'S EMPIRE · LIVE"},
+  {dot:'#a855f7',text:'NOTEHUNT · LIVE'},
+  {dot:'#ff9500',text:'MARKET CASCADE · COMING SOON'},
+  {dot:'#e24b4a',text:'THE MINORITY GAME · COMING SOON'},
+  {dot:'#00e676',text:'THE COMMONS · COMING SOON'},
+  {dot:'#40e0d0',text:'REPUTATION ENGINE · COMING SOON'},
+  {dot:'#ff0080',text:'PUMPO GAMES · PLAY THE SYSTEM'},
+];
+
+// ── RENDER ──────────────────────────────────────
+function renderGames(){
+  document.getElementById('gamesGrid').innerHTML = LIVE_GAMES.map(g=>`
+    <a href="${g.href}" class="arcade-card">
+      <div class="card-screen" style="background:${g.screenBg}">
+        <div class="card-screen-icon" style="color:${g.iconColor}">${g.icon}</div>
+      </div>
+      <div class="card-marquee">
+        <div class="card-marquee-name" style="color:${g.accentColor};text-shadow:0 0 8px ${g.accentColor}80">${g.name}</div>
+        <div class="card-insert">INSERT COIN</div>
+      </div>
+      <div class="card-body">
+        <div class="card-tags">${g.tags.map(t=>`<span class="card-tag" style="border-color:${t.bc};color:${t.tc}">${t.l}</span>`).join('')}</div>
+        <div class="card-concept">${g.concept}</div>
+        <div class="card-desc">${g.desc}</div>
+      </div>
+      <div class="card-tray">
+        <a href="${g.href}" class="play-btn" style="background:${g.accentColor};color:${g.accentColor==='#40e0d0'?'#060608':'#fff'}">PLAY →</a>
+        <span class="card-meta">${g.mode}</span>
+      </div>
+    </a>`).join('');
+}
+
+function renderRoadmap(){
+  document.getElementById('roadmapGrid').innerHTML = ROADMAP_GAMES.map(g=>`
+    <div class="roadmap-card">
+      <span class="roadmap-badge">Coming Soon</span>
+      <span class="roadmap-icon">${g.icon}</span>
+      <div class="roadmap-name" style="color:${g.ac}">${g.name}</div>
+      <div class="roadmap-concept">${g.concept}</div>
+      <div class="roadmap-desc">${g.desc}</div>
+      <div class="roadmap-hook">${g.hook}</div>
+    </div>`).join('');
+  const obs=new IntersectionObserver(entries=>{
+    entries.forEach((e,i)=>{ if(e.isIntersecting){setTimeout(()=>e.target.classList.add('visible'),i*80);obs.unobserve(e.target);} });
+  },{threshold:0.1});
+  document.querySelectorAll('.roadmap-card').forEach(c=>obs.observe(c));
+}
+
+function renderTicker(){
+  const items=[...TICKER_ITEMS,...TICKER_ITEMS];
+  document.getElementById('tickerInner').innerHTML=items.map(t=>
+    `<span class="ticker-item"><span class="ticker-dot" style="background:${t.dot};box-shadow:0 0 5px ${t.dot}"></span>${t.text}</span>`).join('');
+}
+
+function renderNetwork(){
+  document.getElementById('networkRow').innerHTML=NETWORK_LINKS.map(l=>
+    `<a href="${l.href}" class="network-link" ${l.current?'style="border-color:rgba(255,0,128,.2);color:rgba(255,0,128,.4);cursor:default;"':''}>
+      <div class="network-dot" style="background:${l.dot};box-shadow:0 0 5px ${l.dot}"></div>${l.label}
+    </a>`).join('');
+  document.getElementById('footerLinks').innerHTML=
+    [['https://radiopumpo.github.io','Radio'],['https://radiopumpo.github.io/pumpo-tools','Tools'],
+     ['https://radiopumpo.github.io/pumpotv','TV'],['https://github.com/radiopumpo/pumpo-games','GitHub']]
+    .map(([h,l])=>`<a href="${h}" class="footer-link">${l}</a>`).join('');
+}
+
+// ── PARTICLES ───────────────────────────────────
+function initParticles(){
+  const canvas=document.getElementById('particleCanvas');
+  const ctx=canvas.getContext('2d');
+  let W,H,particles=[];
+  const COLORS=['#ff0080','#40e0d0','#ff9500','#a855f7'];
+  function resize(){W=canvas.width=canvas.offsetWidth;H=canvas.height=canvas.offsetHeight;}
+  function spawn(){return{x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.2+.3,vx:(Math.random()-.5)*.25,vy:(Math.random()-.5)*.25,alpha:Math.random()*.3+.05,color:COLORS[Math.floor(Math.random()*COLORS.length)],phase:Math.random()*Math.PI*2};}
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    particles.forEach(p=>{
+      p.x+=p.vx;p.y+=p.vy;p.phase+=.01;
+      if(p.x<0)p.x=W;if(p.x>W)p.x=0;if(p.y<0)p.y=H;if(p.y>H)p.y=0;
+      ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle=p.color;ctx.globalAlpha=p.alpha*(0.5+0.5*Math.sin(p.phase));ctx.fill();
+    });
+    ctx.globalAlpha=1;requestAnimationFrame(draw);
+  }
+  window.addEventListener('resize',resize);
+  resize();particles=Array.from({length:80},spawn);draw();
+}
+
+// ── SMOOTH SCROLL ────────────────────────────────
+document.querySelectorAll('a[href^="#"]').forEach(a=>{
+  a.addEventListener('click',e=>{const t=document.querySelector(a.getAttribute('href'));if(t){e.preventDefault();t.scrollIntoView({behavior:'smooth',block:'start'});}});
+});
+
+// ── BOOT ─────────────────────────────────────────
+renderGames();renderRoadmap();renderTicker();renderNetwork();initParticles();
+</script>
+</body>
+</html>
