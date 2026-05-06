@@ -231,23 +231,26 @@ body::after{content:'';position:fixed;inset:0;z-index:8999;pointer-events:none;o
 // ── DATA (edit to add games / roadmap entries) ──────────────────
 const LIVE_GAMES = [
   { href:'hidden-coordination.html', icon:'⬡', iconColor:'#ff0080', accentColor:'#ff0080',
+    preview:'<canvas id="prev-hc" width="300" height="150" style="width:100%;height:100%;display:block;"></canvas>',
     screenBg:'radial-gradient(ellipse at 50% 40%,rgba(255,0,128,.18),rgba(6,6,8,.9))',
     name:'Hidden Coordination', concept:'Schelling Points · Majority Dynamics',
     tags:[{l:'Game Theory',bc:'rgba(255,0,128,.4)',tc:'#ff0080'},{l:'Ghost Mode',bc:'rgba(255,255,255,.1)',tc:'#5a5a6a'}],
     desc:'25 agents. 4 signals. No communication. Each round the dominant cluster survives — the rest face elimination. Read the field, track winning signals, align before the cull. Agents remember what worked. You should too.',
     mode:'Solo + Ghost Match' },
   { href:'pumpogrid.html', icon:'⬡', iconColor:'#40e0d0', accentColor:'#40e0d0',
+    preview:'<canvas id="prev-emp" width="300" height="150" style="width:100%;height:100%;display:block;"></canvas>',
     screenBg:'radial-gradient(ellipse at 50% 40%,rgba(64,224,208,.15),rgba(6,6,8,.9))',
     name:"Pumpo's Empire", concept:'Complex Systems · Node Networks',
     tags:[{l:'Idle Builder',bc:'rgba(64,224,208,.35)',tc:'#40e0d0'},{l:'Emergent',bc:'rgba(255,255,255,.1)',tc:'#5a5a6a'}],
     desc:'A living canvas of nodes that grow, connect, and crystallise into districts. White nodes swarm, cyan anchors, pink attracts, red destabilises. Watch a settlement become an empire. Emergence from simple rules at scale.',
     mode:'Idle · Observatory Mode' },
   { href:'notehunt.html', icon:'♪', iconColor:'#a855f7', accentColor:'#a855f7',
+    preview:'<canvas id="prev-nh" width="300" height="150" style="width:100%;height:100%;display:block;"></canvas>',
     screenBg:'radial-gradient(ellipse at 50% 40%,rgba(168,85,247,.18),rgba(6,6,8,.9))',
     name:'NoteHunt', concept:'Spatial Discovery · Music Exploration',
     tags:[{l:'Music',bc:'rgba(168,85,247,.4)',tc:'#a855f7'},{l:'Scavenger Hunt',bc:'rgba(255,255,255,.1)',tc:'#5a5a6a'}],
-    desc:'Navigate a spatial map of sounds. Follow clues hidden in frequencies, rhythms, and genres to find the target track. Each hunt is different. The map rewards curiosity and penalises noise.',
-    mode:'Solo · Daily Hunt' },
+    desc:'A location-based note-dropping tool. Long-press anywhere on a real-world map to leave a note — an idea, memory, reminder, or locked message. Notes can be hidden behind proximity, time, visit count, or sequence locks. Scan to reveal what is nearby. Hunt Mode brings shareable real-world scavenger hunts.',
+    mode:'Solo · Discovery + Hunt Mode' },
 ];
 
 const ROADMAP_GAMES = [
@@ -292,8 +295,8 @@ function renderGames(){
   }
   document.getElementById('gamesGrid').innerHTML = LIVE_GAMES.map(function(g){
     return '<a href="'+g.href+'" class="arcade-card">'
-      +'<div class="card-screen" style="background:'+g.screenBg+'">'
-      +'<div class="card-screen-icon" style="color:'+g.iconColor+'">'+g.icon+'</div>'
+      +'<div class="card-screen" style="background:'+g.screenBg+';position:relative;overflow:hidden;">'
+      +(g.preview ? g.preview : '<div class="card-screen-icon" style="color:'+g.iconColor+'">'+g.icon+'</div>')
       +'</div>'
       +'<div class="card-marquee">'
       +'<div class="card-marquee-name" style="color:'+g.accentColor+';text-shadow:0 0 8px '+g.accentColor+'80">'+g.name+'</div>'
@@ -379,8 +382,191 @@ function pressStart(){
   setTimeout(()=> btn.classList.remove('lit'), 900);
 }
 
+// ── CARD PREVIEWS ────────────────────────────────
+function initPreviews(){
+
+  // ── HIDDEN COORDINATION preview ──
+  (function(){
+    const c = document.getElementById('prev-hc'); if(!c) return;
+    const ctx = c.getContext('2d');
+    const W=c.width, H=c.height;
+    const SIGS = ['A','B','C','D'];
+    const COLS = ['#ff0080','#40e0d0','#ffaa00','#a855f7'];
+    let agents = Array.from({length:24},(_,i)=>({
+      sig: Math.floor(Math.random()*4),
+      x: 30 + Math.floor(i%6)*40,
+      y: 30 + Math.floor(i/6)*35,
+      tx:0,ty:0,alpha:1
+    }));
+    let dominant = 0, t=0;
+    function stepAgents(){
+      // Every 90 frames, shift dominant signal
+      dominant = Math.floor(t/90)%4;
+      agents.forEach((a,i)=>{
+        if(Math.random()<0.04) a.sig = Math.random()<0.6?dominant:Math.floor(Math.random()*4);
+        // Target position: cluster by signal in 4 zones
+        const zone = a.sig;
+        const zx = [50,210,50,210][zone];
+        const zy = [40,40,110,110][zone];
+        a.x += (zx + (Math.random()-0.5)*35 - a.x)*0.04;
+        a.y += (zy + (Math.random()-0.5)*25 - a.y)*0.04;
+      });
+    }
+    function draw(){
+      ctx.clearRect(0,0,W,H);
+      // bg
+      ctx.fillStyle='#0a0a0a'; ctx.fillRect(0,0,W,H);
+      // signal labels
+      SIGS.forEach((s,i)=>{
+        const x=[50,210,50,210][i], y=[15,15,130,130][i];
+        ctx.font='bold 9px Space Mono,monospace';
+        ctx.fillStyle=COLS[i]+(i===dominant?'':'55');
+        ctx.textAlign='center'; ctx.fillText(s,x,y);
+        if(i===dominant){
+          ctx.strokeStyle=COLS[i]+'33';
+          ctx.lineWidth=1;
+          ctx.beginPath();
+          ctx.arc(x,y+15,28,0,Math.PI*2);
+          ctx.stroke();
+        }
+      });
+      // agents
+      agents.forEach(a=>{
+        const col = COLS[a.sig];
+        const isDom = a.sig===dominant;
+        ctx.beginPath();
+        ctx.arc(a.x,a.y,isDom?4:3,0,Math.PI*2);
+        ctx.fillStyle=col+(isDom?'cc':'66');
+        ctx.fill();
+        if(isDom){
+          ctx.beginPath(); ctx.arc(a.x,a.y,6,0,Math.PI*2);
+          ctx.strokeStyle=col+'44'; ctx.lineWidth=1; ctx.stroke();
+        }
+      });
+      // SIGNAL label top right
+      ctx.font='7px Space Mono,monospace'; ctx.fillStyle='#333'; ctx.textAlign='right';
+      ctx.fillText('LIVE FIELD',W-6,H-6);
+      t++; stepAgents();
+      requestAnimationFrame(draw);
+    }
+    draw();
+  })();
+
+  // ── PUMPO'S EMPIRE preview ──
+  (function(){
+    const c = document.getElementById('prev-emp'); if(!c) return;
+    const ctx = c.getContext('2d');
+    const W=c.width, H=c.height;
+    let nodes = Array.from({length:40},()=>({
+      x:Math.random()*W, y:Math.random()*H,
+      vx:(Math.random()-.5)*.6, vy:(Math.random()-.5)*.6,
+      type:Math.random()<0.6?'white':Math.random()<0.5?'cyan':'pink',
+      size:Math.random()*2+1, life:Math.random()*100
+    }));
+    const NCOLS = {white:'rgba(240,237,230,0.6)',cyan:'rgba(64,224,208,0.7)',pink:'rgba(255,0,128,0.7)'};
+    function draw(){
+      ctx.fillStyle='rgba(10,10,10,0.25)'; ctx.fillRect(0,0,W,H);
+      // connections
+      nodes.forEach((a,i)=>{
+        nodes.slice(i+1).forEach(b=>{
+          const dx=a.x-b.x, dy=a.y-b.y, d=Math.sqrt(dx*dx+dy*dy);
+          if(d<45){
+            ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
+            ctx.strokeStyle='rgba(64,224,208,'+(0.15*(1-d/45))+')';
+            ctx.lineWidth=0.5; ctx.stroke();
+          }
+        });
+        // move
+        a.x+=a.vx; a.y+=a.vy; a.life++;
+        if(a.x<0||a.x>W) a.vx*=-1;
+        if(a.y<0||a.y>H) a.vy*=-1;
+        // attract pink pulls cyan
+        if(a.type==='cyan'){
+          nodes.filter(n=>n.type==='pink').forEach(p=>{
+            const dx=p.x-a.x,dy=p.y-a.y,d=Math.sqrt(dx*dx+dy*dy);
+            if(d<80){a.vx+=dx/d*.02; a.vy+=dy/d*.02;}
+          });
+        }
+        a.vx*=0.99; a.vy*=0.99;
+        // draw node
+        ctx.beginPath(); ctx.arc(a.x,a.y,a.size,0,Math.PI*2);
+        ctx.fillStyle=NCOLS[a.type]||'rgba(255,255,255,0.5)'; ctx.fill();
+      });
+      ctx.font='7px Space Mono,monospace'; ctx.fillStyle='#222'; ctx.textAlign='right';
+      ctx.fillText('LIVE SIM',W-6,H-6);
+      requestAnimationFrame(draw);
+    }
+    draw();
+  })();
+
+  // ── NOTEHUNT preview ──
+  (function(){
+    const c = document.getElementById('prev-nh'); if(!c) return;
+    const ctx = c.getContext('2d');
+    const W=c.width, H=c.height;
+    // Static grid dots (map feel)
+    const pins = [
+      {x:60,y:55,col:'#00ff88',label:'💡',placed:0},
+      {x:180,y:40,col:'#ffaa00',label:'🔒',placed:0},
+      {x:110,y:100,col:'#00ff88',label:'🌀',placed:0},
+      {x:240,y:90,col:'#a855f7',label:'🧠',placed:0},
+      {x:40,y:120,col:'#00ff88',label:'⚠️',placed:0},
+    ];
+    let t=0, scanRing=-1, scanX=0, scanY=0;
+    // Stagger pin appearances
+    pins.forEach((p,i)=>{ p.placed = i*60+20; });
+
+    function draw(){
+      ctx.fillStyle='#08080c'; ctx.fillRect(0,0,W,H);
+      // Grid dots
+      for(let gx=0;gx<W;gx+=20) for(let gy=0;gy<H;gy+=20){
+        ctx.beginPath(); ctx.arc(gx,gy,0.8,0,Math.PI*2);
+        ctx.fillStyle='rgba(64,224,208,0.08)'; ctx.fill();
+      }
+      // Roads (faint lines)
+      [[0,75,W,75],[0,115,W,115],[80,0,80,H],[160,0,160,H]].forEach(([x1,y1,x2,y2])=>{
+        ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2);
+        ctx.strokeStyle='rgba(255,255,255,0.04)'; ctx.lineWidth=6; ctx.stroke();
+      });
+      // Scan ring
+      if(scanRing>0){
+        ctx.beginPath(); ctx.arc(scanX,scanY,scanRing,0,Math.PI*2);
+        ctx.strokeStyle='rgba(0,255,136,'+(1-scanRing/120)+')';
+        ctx.lineWidth=1; ctx.stroke();
+        scanRing+=3; if(scanRing>120) scanRing=-1;
+      }
+      // Trigger scan occasionally
+      if(t%180===0){ scanRing=2; scanX=Math.random()*W; scanY=Math.random()*H; }
+      // Pins
+      pins.forEach(p=>{
+        if(t<p.placed) return;
+        const age=t-p.placed;
+        const scale=Math.min(1,age/20);
+        const pulse=0.7+0.3*Math.sin(t*0.06+p.x);
+        ctx.save();
+        ctx.translate(p.x,p.y);
+        ctx.scale(scale,scale);
+        // glow ring
+        ctx.beginPath(); ctx.arc(0,0,10,0,Math.PI*2);
+        ctx.fillStyle=p.col.replace(')',','+pulse*0.15+')').replace('rgb','rgba');
+        ctx.fill();
+        ctx.beginPath(); ctx.arc(0,0,10,0,Math.PI*2);
+        ctx.strokeStyle=p.col+'88'; ctx.lineWidth=1; ctx.stroke();
+        // emoji
+        ctx.font='10px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText(p.label,0,0);
+        ctx.restore();
+      });
+      ctx.font='7px Space Mono,monospace'; ctx.fillStyle='#1a1a1a';
+      ctx.textAlign='right'; ctx.fillText('LIVE MAP',W-6,H-6);
+      t++; requestAnimationFrame(draw);
+    }
+    draw();
+  })();
+}
+
 // ── BOOT ─────────────────────────────────────────
-renderGames();renderRoadmap();renderTicker();renderNetwork();initParticles();
+renderGames();renderRoadmap();renderTicker();renderNetwork();initParticles();setTimeout(initPreviews,100);
 </script>
 </body>
 </html>
