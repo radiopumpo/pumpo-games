@@ -35,6 +35,7 @@ body::after{content:'';position:fixed;inset:0;z-index:8999;pointer-events:none;o
 .nav-link:hover{border-color:var(--cyan);color:var(--cyan);text-shadow:var(--glow-cyan);}
 .nav-live{font-family:var(--mono);font-size:.55rem;letter-spacing:.12em;padding:3px 9px;border-radius:3px;border:1px solid rgba(255,0,128,.35);color:var(--pink);background:rgba(255,0,128,.06);animation:livePulse 2s infinite;}
 @keyframes livePulse{0%,100%{opacity:1}50%{opacity:.6}}
+.nav-coin{font-family:var(--mono);font-size:.55rem;letter-spacing:.12em;padding:3px 9px;border-radius:3px;border:1px solid rgba(255,149,0,.35);color:var(--amber);background:rgba(255,149,0,.06);animation:coinBlink 1.4s step-end infinite;text-shadow:var(--glow-amber);}
 
 /* HERO */
 .hero{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6rem 1.5rem 4rem;text-align:center;overflow:hidden;}
@@ -68,6 +69,12 @@ body::after{content:'';position:fixed;inset:0;z-index:8999;pointer-events:none;o
 .cta-primary:hover::before{left:100%;}
 .cta-primary:hover{transform:translateY(-2px);box-shadow:0 0 20px rgba(255,0,128,.8),0 0 60px rgba(255,0,128,.3);}
 .cta-secondary{font-family:var(--mono);font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;padding:.75rem 1.25rem;border-radius:3px;border:1px solid rgba(64,224,208,.3);color:var(--cyan);text-decoration:none;transition:.2s;}
+.press-start-btn{font-family:var(--display);font-size:.9rem;letter-spacing:2px;padding:.8rem 2.25rem;border-radius:3px;background:transparent;color:var(--pink);border:2px solid var(--pink);cursor:pointer;text-transform:uppercase;transition:all .2s;box-shadow:0 0 10px rgba(255,0,128,.3),inset 0 0 10px rgba(255,0,128,.05);animation:startPulse 2s ease-in-out infinite;position:relative;overflow:hidden;}
+.press-start-btn::before{content:'';position:absolute;inset:0;background:var(--pink);opacity:0;transition:opacity .15s;}
+.press-start-btn:active::before,.press-start-btn.lit::before{opacity:1;}
+.press-start-btn.lit{color:#fff;box-shadow:0 0 30px rgba(255,0,128,.9),0 0 60px rgba(255,0,128,.4),inset 0 0 20px rgba(255,0,128,.3);animation:none;}
+.press-start-btn.lit span{position:relative;z-index:1;}
+@keyframes startPulse{0%,100%{box-shadow:0 0 10px rgba(255,0,128,.3),inset 0 0 10px rgba(255,0,128,.05)}50%{box-shadow:0 0 20px rgba(255,0,128,.6),inset 0 0 15px rgba(255,0,128,.1)}}
 .cta-secondary:hover{border-color:var(--cyan);box-shadow:var(--glow-cyan);}
 .coin-insert{font-family:var(--mono);font-size:.65rem;letter-spacing:.2em;color:var(--amber);text-transform:uppercase;animation:coinBlink 1.4s step-end infinite;text-shadow:var(--glow-amber);}
 @keyframes coinBlink{0%,49%{opacity:1}50%,100%{opacity:0}}
@@ -96,7 +103,7 @@ body::after{content:'';position:fixed;inset:0;z-index:8999;pointer-events:none;o
 .section-sub{font-size:13px;color:var(--muted);font-weight:600;line-height:1.7;max-width:480px;margin-top:.5rem;margin-bottom:2rem;}
 
 /* ARCADE CARDS */
-.games-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px;}
+.games-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}@media(max-width:900px){.games-grid{grid-template-columns:repeat(2,1fr);}}@media(max-width:580px){.games-grid{grid-template-columns:1fr;}}
 .arcade-card{background:var(--bg2);border:1px solid var(--border2);border-radius:4px;overflow:hidden;text-decoration:none;color:var(--text);display:flex;flex-direction:column;position:relative;transition:transform .2s,box-shadow .2s;box-shadow:inset 2px 0 0 rgba(255,255,255,.03),inset -2px 0 0 rgba(255,255,255,.03);}
 .arcade-card::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.03) 0%,transparent 40%);pointer-events:none;}
 .arcade-card:hover{transform:translateY(-4px);}
@@ -115,10 +122,7 @@ body::after{content:'';position:fixed;inset:0;z-index:8999;pointer-events:none;o
 .card-tag{font-family:var(--mono);font-size:.5rem;letter-spacing:.1em;padding:2px 7px;border-radius:2px;border:1px solid;text-transform:uppercase;}
 .card-concept{font-family:var(--mono);font-size:.55rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.5rem;}
 .card-desc{font-size:12px;color:var(--muted);font-weight:600;line-height:1.65;flex:1;margin-bottom:.85rem;}
-.card-tray{background:var(--bg3);border-top:1px solid var(--border);padding:.65rem 1.1rem;display:flex;align-items:center;justify-content:space-between;}
-.play-btn{font-family:var(--display);font-size:.65rem;letter-spacing:1px;padding:.4rem 1rem;border-radius:2px;border:none;cursor:pointer;text-decoration:none;transition:all .15s;display:inline-block;position:relative;overflow:hidden;}
-.play-btn::after{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.2),transparent);transition:left .3s;}
-.play-btn:hover::after{left:100%;}
+
 .card-meta{font-family:var(--mono);font-size:.55rem;color:var(--muted);letter-spacing:.06em;}
 
 /* ROADMAP */
@@ -168,6 +172,7 @@ body::after{content:'';position:fixed;inset:0;z-index:8999;pointer-events:none;o
     <a href="#roadmap" class="nav-link">Roadmap</a>
     <a href="https://radiopumpo.github.io/pumpo-tools" class="nav-link">🛠 Tools</a>
     <a href="https://radiopumpo.github.io"             class="nav-link">📻 Radio</a>
+    <span class="nav-coin">INSERT COIN</span>
   </div>
 </nav>
 
@@ -183,10 +188,9 @@ body::after{content:'';position:fixed;inset:0;z-index:8999;pointer-events:none;o
     <div class="hero-tagline">Simple rules · Emergent complexity · Real consequences</div>
     <p class="hero-sub">These games model <strong>real systems</strong> — coordination failures, resource depletion, reputation collapse, market cascades. Play them and you will understand something about the world that textbooks will not tell you.</p>
     <div class="hero-cta-row">
-      <a href="#games"   class="cta-primary">INSERT COIN</a>
+      <button class="press-start-btn" id="pressStartBtn" onclick="pressStart()"><span>▶ PRESS START</span></button>
       <a href="#roadmap" class="cta-secondary">Coming Soon →</a>
     </div>
-    <div class="coin-insert">▲ Press Start ▲</div>
   </div>
 </section>
 
@@ -281,25 +285,28 @@ const TICKER_ITEMS = [
 
 // ── RENDER ──────────────────────────────────────
 function renderGames(){
-  document.getElementById('gamesGrid').innerHTML = LIVE_GAMES.map(g=>`
-    <a href="${g.href}" class="arcade-card">
-      <div class="card-screen" style="background:${g.screenBg}">
-        <div class="card-screen-icon" style="color:${g.iconColor}">${g.icon}</div>
-      </div>
-      <div class="card-marquee">
-        <div class="card-marquee-name" style="color:${g.accentColor};text-shadow:0 0 8px ${g.accentColor}80">${g.name}</div>
-        <div class="card-insert">INSERT COIN</div>
-      </div>
-      <div class="card-body">
-        <div class="card-tags">${g.tags.map(t=>`<span class="card-tag" style="border-color:${t.bc};color:${t.tc}">${t.l}</span>`).join('')}</div>
-        <div class="card-concept">${g.concept}</div>
-        <div class="card-desc">${g.desc}</div>
-      </div>
-      <div class="card-tray">
-        <a href="${g.href}" class="play-btn" style="background:${g.accentColor};color:${g.accentColor==='#40e0d0'?'#060608':'#fff'}">PLAY →</a>
-        <span class="card-meta">${g.mode}</span>
-      </div>
-    </a>`).join('');
+  function buildTags(tags){
+    return tags.map(function(t){
+      return '<span class="card-tag" style="border-color:'+t.bc+';color:'+t.tc+'">'+t.l+'</span>';
+    }).join('');
+  }
+  document.getElementById('gamesGrid').innerHTML = LIVE_GAMES.map(function(g){
+    return '<a href="'+g.href+'" class="arcade-card">'
+      +'<div class="card-screen" style="background:'+g.screenBg+'">'
+      +'<div class="card-screen-icon" style="color:'+g.iconColor+'">'+g.icon+'</div>'
+      +'</div>'
+      +'<div class="card-marquee">'
+      +'<div class="card-marquee-name" style="color:'+g.accentColor+';text-shadow:0 0 8px '+g.accentColor+'80">'+g.name+'</div>'
+      +'<div class="card-insert">INSERT COIN</div>'
+      +'</div>'
+      +'<div class="card-body">'
+      +'<div class="card-tags">'+buildTags(g.tags)+'</div>'
+      +'<div class="card-concept">'+g.concept+'</div>'
+      +'<div class="card-desc">'+g.desc+'</div>'
+      +'<div class="card-meta" style="margin-top:auto;padding-top:.5rem;">'+g.mode+'</div>'
+      +'</div>'
+      +'</a>';
+  }).join('');
 }
 
 function renderRoadmap(){
@@ -361,6 +368,16 @@ function initParticles(){
 document.querySelectorAll('a[href^="#"]').forEach(a=>{
   a.addEventListener('click',e=>{const t=document.querySelector(a.getAttribute('href'));if(t){e.preventDefault();t.scrollIntoView({behavior:'smooth',block:'start'});}});
 });
+
+// ── PRESS START ─────────────────────────────────
+function pressStart(){
+  const btn = document.getElementById('pressStartBtn');
+  btn.classList.add('lit');
+  setTimeout(()=>{
+    document.getElementById('games').scrollIntoView({behavior:'smooth',block:'start'});
+  }, 320);
+  setTimeout(()=> btn.classList.remove('lit'), 900);
+}
 
 // ── BOOT ─────────────────────────────────────────
 renderGames();renderRoadmap();renderTicker();renderNetwork();initParticles();
