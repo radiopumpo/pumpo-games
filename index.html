@@ -362,7 +362,7 @@ body::before{content:'';position:fixed;inset:0;z-index:9000;pointer-events:none;
 // DATA
 // ════════════════════════════════════════════════
 const ALL_GAMES = [
-  { id:'drive', href:'radiopumpo/drive.html', live:true,
+  { id:'drive', href:'drive.html', live:true,
     name:'Pumpo Drive', fullName:'Pumpo Drive',
     accent:'#40e0d0', concept:'Driving 2 Music',
     desc:'Drive while listening to Radio Pumpo. Choose if you Cruise or Rush.',
@@ -452,6 +452,233 @@ function resizeCanvas(){
   const wrap = canvas.parentElement;
   canvas.width = wrap.clientWidth;
   canvas.height = wrap.clientHeight;
+}
+
+// ──────────────────────────────────────────────────────────
+// PREVIEW : RADIO PUMPO DRIVE
+// lightweight menu animation
+// ──────────────────────────────────────────────────────────
+
+function drawDrivePreview(t) {
+  const time = t * 0.001;
+
+  // init preview state once
+  if (!previewState.drive) {
+    previewState.drive = {
+      cars: Array.from({ length: 8 }, () => ({
+        lane: Math.floor(Math.random() * 3),
+        depth: Math.random(),
+        speed: 0.0015 + Math.random() * 0.002,
+        color: [
+          '#ff2d78',
+          '#00ffe7',
+          '#b24bff',
+          '#ffaa00'
+        ][Math.floor(Math.random() * 4)]
+      }))
+    };
+  }
+
+  const state = previewState.drive;
+
+  const W = canvas.width;
+  const H = canvas.height;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // ── SKY ─────────────────────────────────────
+  const sky = ctx.createLinearGradient(0, 0, 0, H * 0.45);
+  sky.addColorStop(0, '#070011');
+  sky.addColorStop(0.4, '#1a0030');
+  sky.addColorStop(1, '#32003f');
+
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, W, H);
+
+  const hy = H * 0.44;
+
+  // ── RETRO SUN ───────────────────────────────
+  const sunX = W * 0.5;
+  const sunY = hy * 0.58;
+  const sunR = Math.min(W, H) * 0.13;
+
+  const sg = ctx.createRadialGradient(
+    sunX, sunY, 0,
+    sunX, sunY, sunR
+  );
+
+  sg.addColorStop(0, '#fff');
+  sg.addColorStop(0.2, '#ffb6d5');
+  sg.addColorStop(0.5, '#ff2d78');
+  sg.addColorStop(1, '#7d0040');
+
+  ctx.fillStyle = sg;
+
+  ctx.beginPath();
+  ctx.arc(sunX, sunY, sunR, 0, Math.PI * 2);
+  ctx.fill();
+
+  // sun stripes
+  for (let i = 0; i < 7; i++) {
+    const yy = sunY + i * (sunR * 0.18);
+
+    ctx.fillStyle = 'rgba(10,0,20,0.55)';
+    ctx.fillRect(
+      sunX - sunR,
+      yy,
+      sunR * 2,
+      sunR * 0.08
+    );
+  }
+
+  // ── STARS ───────────────────────────────────
+  for (let i = 0; i < 60; i++) {
+    const x = (i * 173.37) % W;
+    const y = ((i * 91.17) % (hy * 0.95));
+
+    const a = 0.4 + Math.sin(time * 2 + i) * 0.3;
+
+    ctx.fillStyle = `rgba(255,255,255,${a})`;
+    ctx.fillRect(x, y, 2, 2);
+  }
+
+  // ── ROAD ────────────────────────────────────
+  const roadTopW = W * 0.08;
+  const roadBotW = W * 0.92;
+
+  ctx.fillStyle = '#0a0a18';
+
+  ctx.beginPath();
+  ctx.moveTo(W/2 - roadTopW/2, hy);
+  ctx.lineTo(W/2 + roadTopW/2, hy);
+  ctx.lineTo(W/2 + roadBotW/2, H);
+  ctx.lineTo(W/2 - roadBotW/2, H);
+  ctx.closePath();
+  ctx.fill();
+
+  // neon edges
+  ctx.strokeStyle = '#ff2d78';
+  ctx.lineWidth = 3;
+  ctx.shadowColor = '#ff2d78';
+  ctx.shadowBlur = 12;
+
+  ctx.beginPath();
+  ctx.moveTo(W/2 - roadTopW/2, hy);
+  ctx.lineTo(W/2 - roadBotW/2, H);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(W/2 + roadTopW/2, hy);
+  ctx.lineTo(W/2 + roadBotW/2, H);
+  ctx.stroke();
+
+  ctx.shadowBlur = 0;
+
+  // center lane dashes
+  for (let i = 0; i < 16; i++) {
+
+    const p = (i / 16 + time * 0.6) % 1;
+
+    const y = hy + p * (H - hy);
+
+    const scale = p;
+
+    const w = 2 + scale * 8;
+    const h = 8 + scale * 24;
+
+    ctx.fillStyle = 'rgba(220,240,255,0.8)';
+
+    ctx.fillRect(
+      W/2 - w/2,
+      y,
+      w,
+      h
+    );
+  }
+
+  // ── PREVIEW TRAFFIC ─────────────────────────
+  state.cars.forEach(car => {
+
+    car.depth += car.speed;
+
+    if (car.depth > 1.1) {
+      car.depth = 0.02;
+      car.lane = Math.floor(Math.random() * 3);
+    }
+
+    const p = car.depth;
+
+    const roadW =
+      roadTopW + (roadBotW - roadTopW) * p;
+
+    const laneW = roadW / 3;
+
+    const cx =
+      W/2 - roadW/2 +
+      laneW * (car.lane + 0.5);
+
+    const cy =
+      hy + p * (H - hy);
+
+    const scale = 0.3 + p * 2.2;
+
+    const cw = 12 * scale;
+    const ch = 18 * scale;
+
+    // glow
+    ctx.shadowColor = car.color;
+    ctx.shadowBlur = 16;
+
+    ctx.fillStyle = car.color;
+
+    ctx.beginPath();
+    ctx.roundRect(
+      cx - cw/2,
+      cy - ch,
+      cw,
+      ch,
+      4
+    );
+
+    ctx.fill();
+
+    ctx.shadowBlur = 0;
+
+    // headlights
+    ctx.fillStyle = '#dff8ff';
+
+    ctx.fillRect(
+      cx - cw * 0.28,
+      cy - ch * 0.15,
+      cw * 0.18,
+      ch * 0.08
+    );
+
+    ctx.fillRect(
+      cx + cw * 0.10,
+      cy - ch * 0.15,
+      cw * 0.18,
+      ch * 0.08
+    );
+  });
+
+  // ── HORIZON GLOW ────────────────────────────
+  const hg = ctx.createLinearGradient(
+    0,
+    hy - 40,
+    0,
+    hy + 20
+  );
+
+  hg.addColorStop(0, 'rgba(255,0,120,0)');
+  hg.addColorStop(0.5, 'rgba(255,0,120,0.3)');
+  hg.addColorStop(1, 'rgba(255,0,120,0)');
+
+  ctx.fillStyle = hg;
+  ctx.fillRect(0, hy - 40, W, 80);
+
+  // ── LABEL ───────────────────────────────────
+  drawScreenLabel('PUMPO DRIVE', '#ff2d78');
 }
 
 // ── Preview: Hidden Coordination ──
@@ -670,7 +897,8 @@ function animLoop(){
     drawHome(tick);
   } else {
     const g=currentGame();
-    if(g.preview==='hc') drawHC(tick);
+    if(g.preview==='drive') drawDrivePreview(tick);
+    else if(g.preview==='hc') drawHC(tick);
     else if(g.preview==='empire') drawEmpire(tick);
     else if(g.preview==='notehunt') drawNoteHunt(tick);
     else drawLocked();
