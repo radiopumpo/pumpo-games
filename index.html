@@ -362,8 +362,13 @@ body::before{content:'';position:fixed;inset:0;z-index:9000;pointer-events:none;
 // DATA
 // ════════════════════════════════════════════════
 const ALL_GAMES = [
+  { id:'drive', href:'radiopumpo/drive.html', live:true,
+    name:'Pumpo Drive', fullName:'Pumpo Drive',
+    accent:'#40e0d0', concept:'Driving 2 Music',
+    desc:'Drive while listening to Radio Pumpo. Choose if you Cruise or Rush.',
+    preview:'drive' },
   { id:'hc', href:'hidden-coordination.html', live:true,
-    name:'Hidden Coord', fullName:'Hidden Coordination',
+    name:'Hidden Coordination', fullName:'Hidden Coordination',
     accent:'#ff0080', concept:'Schelling Points',
     desc:'25 agents. 4 signals. No communication. Align with the dominant cluster or be culled.',
     preview:'hc' },
@@ -415,6 +420,7 @@ const ROADMAP_GAMES = [
 ];
 
 const TICKER_ITEMS = [
+  {dot:'#40e0d0',text:'PUMPO DRIVE · LIVE'},
   {dot:'#ff0080',text:'HIDDEN COORDINATION · LIVE'},
   {dot:'#40e0d0',text:"PUMPO'S EMPIRE · LIVE"},
   {dot:'#a855f7',text:'NOTEHUNT · LIVE'},
