@@ -5,1143 +5,1040 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Radio Pumpo Drive</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap');
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --neon-pink:   #ff2d78;
-    --neon-cyan:   #00ffe7;
-    --neon-purple: #b24bff;
-    --hud-bg:      rgba(0,0,0,0.6);
-    --hud-border:  rgba(255,45,120,0.45);
-  }
-  html, body {
-    width: 100%; height: 100%;
-    overflow: hidden;
-    background: #000;
-    font-family: 'Rajdhani', sans-serif;
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
-  }
-  #gameCanvas {
-    display: block;
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-  }
-  /* ── HUD ── */
-  #hud {
-    position: fixed; inset: 0;
-    pointer-events: none;
-    z-index: 10;
-  }
-  #mode-badge {
-    position: absolute;
-    top: env(safe-area-inset-top, 16px);
-    top: max(16px, env(safe-area-inset-top));
-    left: 18px;
-    font-size: 11px; letter-spacing: 2px; font-weight: 700;
-    color: var(--neon-cyan);
-    text-shadow: 0 0 10px var(--neon-cyan);
-    text-transform: uppercase;
-  }
-  #hud-top {
-    position: absolute;
-    top: max(16px, env(safe-area-inset-top));
-    right: 18px;
-    text-align: right;
-  }
-  #hud-distance {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: clamp(14px, 4vw, 20px);
-    color: var(--neon-cyan);
-    letter-spacing: 2px;
-    text-shadow: 0 0 12px var(--neon-cyan);
-  }
-  #hud-combo {
-    font-size: clamp(24px, 7vw, 38px);
-    font-weight: 700;
-    color: var(--neon-pink);
-    text-shadow: 0 0 16px var(--neon-pink);
-    line-height: 1;
-    transition: opacity 0.3s;
-  }
-  #hud-combo.hidden { opacity: 0; }
-  /* Radio bar — bottom left, clear of safari UI */
-  #radio-hud {
-    position: absolute;
-    bottom: max(18px, env(safe-area-inset-bottom));
-    left: 14px;
-    pointer-events: all;
-    max-width: min(320px, calc(100vw - 28px));
-  }
-  #radio-bar {
-    background: var(--hud-bg);
-    border: 1px solid var(--hud-border);
-    border-radius: 10px;
-    padding: 9px 12px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-  }
-  #radio-dot {
-    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
-    background: #444;
-  }
-  #radio-dot.live {
-    background: var(--neon-pink);
-    box-shadow: 0 0 8px var(--neon-pink);
-    animation: dotpulse 1.4s ease-in-out infinite;
-  }
-  @keyframes dotpulse { 0%,100%{opacity:1} 50%{opacity:0.25} }
-  #radio-text { overflow: hidden; min-width: 0; flex: 1; }
-  #radio-label {
-    font-size: 8px; letter-spacing: 2px; color: var(--neon-pink);
-    font-weight: 700; text-transform: uppercase; margin-bottom: 2px;
-  }
-  #pumpo-song-marquee {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: clamp(11px, 3vw, 13px);
-    color: #fff; white-space: nowrap;
-    overflow: hidden; text-overflow: ellipsis;
-  }
-  #pumpo-song-marquee.scrolling {
-    animation: mq 14s linear infinite;
-  }
-  @keyframes mq {
-    0%,25% { transform: translateX(0); }
-    75%,100% { transform: translateX(var(--sd,-50px)); }
-  }
-  #pumpo-radio-toggle {
-    flex-shrink: 0;
-    background: transparent;
-    border: 1px solid var(--neon-pink);
-    color: var(--neon-pink);
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
-    padding: 6px 10px; border-radius: 5px; cursor: pointer;
-    transition: background 0.15s, color 0.15s;
-    white-space: nowrap;
-    -webkit-tap-highlight-color: transparent;
-  }
-  #pumpo-radio-toggle.on {
-    background: var(--neon-pink); color: #000;
-  }
-  /* Feedback overlays */
-  #near-miss-flash {
-    position: absolute; top: 42%; left: 50%;
-    transform: translate(-50%,-50%);
-    font-size: clamp(18px, 5vw, 32px); font-weight: 700;
-    color: var(--neon-cyan);
-    text-shadow: 0 0 20px var(--neon-cyan);
-    letter-spacing: 3px; opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.12s;
-    white-space: nowrap;
-    text-align: center;
-  }
-  #crash-overlay {
-    position: absolute; inset: 0;
-    background: rgba(255,0,50,0.38);
-    opacity: 0; pointer-events: none;
-    transition: opacity 0.15s;
-  }
-  #billboard-msg {
-    position: absolute; top: 35%; left: 50%;
-    transform: translateX(-50%);
-    font-size: clamp(12px, 3vw, 16px); font-style: italic;
-    color: rgba(255,210,120,0.9);
-    text-shadow: 0 0 12px rgba(255,140,0,0.6);
-    letter-spacing: 1px; opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.9s;
-    white-space: nowrap; text-align: center;
-  }
-  /* Mobile touch zones — disabled until game starts */
-  #touch-left, #touch-right {
-    position: fixed; top: 0; bottom: 0; width: 50%; z-index: 5;
-    pointer-events: none;
-  }
-  #touch-left  { left: 0; }
-  #touch-right { right: 0; }
-  /* Scanlines */
-  #scanlines {
-    position: fixed; inset: 0; z-index: 8; pointer-events: none;
-    background: repeating-linear-gradient(
-      0deg, transparent, transparent 3px,
-      rgba(0,0,0,0.05) 3px, rgba(0,0,0,0.05) 4px
-    );
-  }
-  /* ── MENU ── */
-  #menu-screen {
-    position: fixed; inset: 0; z-index: 100;
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    background: linear-gradient(180deg, #050008 0%, #110020 55%, #2a0010 100%);
-  }
-  .menu-logo {
-    font-size: clamp(32px, 10vw, 58px);
-    font-weight: 700; letter-spacing: 4px; color: #fff;
-    text-shadow: 0 0 30px var(--neon-pink), 0 0 60px rgba(255,45,120,0.35);
-    margin-bottom: 6px;
-  }
-  .menu-sub {
-    font-size: clamp(11px, 3vw, 14px); letter-spacing: 7px;
-    color: var(--neon-cyan); text-shadow: 0 0 12px var(--neon-cyan);
-    margin-bottom: 52px; text-transform: uppercase;
-  }
-  .menu-buttons {
-    display: flex; flex-direction: column; gap: 16px;
-    align-items: center; width: 100%; max-width: 300px; padding: 0 20px;
-  }
-  .menu-btn {
-    width: 100%; background: transparent;
-    font-family: 'Rajdhani', sans-serif;
-    font-size: clamp(15px, 4vw, 18px); font-weight: 700; letter-spacing: 3px;
-    padding: 16px 24px; border-radius: 7px; cursor: pointer;
-    text-transform: uppercase; transition: all 0.15s;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .menu-btn.cruise {
-    border: 1px solid var(--neon-cyan); color: var(--neon-cyan);
-    text-shadow: 0 0 10px var(--neon-cyan);
-    box-shadow: 0 0 18px rgba(0,255,231,0.08);
-  }
-  .menu-btn.cruise:active { background: rgba(0,255,231,0.12); }
-  .menu-btn.rush {
-    border: 1px solid var(--neon-pink); color: var(--neon-pink);
-    text-shadow: 0 0 10px var(--neon-pink);
-    box-shadow: 0 0 18px rgba(255,45,120,0.08);
-  }
-  .menu-btn.rush:active { background: rgba(255,45,120,0.12); }
-  .menu-mode-desc {
-    font-size: clamp(10px, 2.5vw, 12px); color: rgba(255,255,255,0.4);
-    letter-spacing: 1px; margin-top: -8px; text-align: center;
-  }
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Share+Tech+Mono&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Rajdhani',sans-serif;user-select:none;-webkit-tap-highlight-color:transparent;}
+#c{display:block;position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;}
+#sc{position:fixed;inset:0;z-index:20;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.07) 2px,rgba(0,0,0,0.07) 4px);}
+#hud{position:fixed;inset:0;z-index:15;pointer-events:none;}
+#near-miss{position:absolute;top:30%;left:50%;transform:translate(-50%,-50%);font-family:'Share Tech Mono',monospace;font-size:clamp(16px,4.5vw,28px);font-weight:700;color:#00ffe7;text-shadow:0 0 14px #00ffe7;letter-spacing:3px;opacity:0;transition:opacity 0.08s;white-space:nowrap;text-align:center;}
+#crash-flash{position:absolute;inset:0;background:rgba(255,0,60,0.42);opacity:0;transition:opacity 0.1s;}
+#billboard{position:absolute;top:22%;left:50%;transform:translateX(-50%);font-family:'Share Tech Mono',monospace;font-size:clamp(10px,2.5vw,15px);font-style:italic;color:rgba(255,215,120,0.90);text-shadow:0 0 12px rgba(255,120,0,0.7);letter-spacing:2px;opacity:0;transition:opacity 0.8s;white-space:nowrap;text-align:center;}
+#mode-badge{position:absolute;top:max(16px,env(safe-area-inset-top));left:16px;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;font-weight:700;color:#00ffe7;text-shadow:0 0 8px #00ffe7;text-transform:uppercase;}
+#tl,#tr{position:fixed;top:0;bottom:0;width:50%;z-index:8;pointer-events:none;}
+#tl{left:0;}#tr{right:0;}
+#menu{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(180deg,rgba(4,0,10,0.5) 0%,rgba(14,0,28,0.80) 55%,rgba(32,0,18,0.96) 100%);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);transition:opacity 0.4s ease;}
+.logo{font-size:clamp(34px,10vw,62px);font-weight:700;letter-spacing:5px;color:#fff;text-shadow:0 0 16px #ff2d78,0 0 40px rgba(255,45,120,0.5);margin-bottom:5px;}
+.sub{font-size:clamp(11px,3vw,14px);letter-spacing:8px;color:#00ffe7;text-shadow:0 0 10px #00ffe7;margin-bottom:40px;text-transform:uppercase;}
+.btns{display:flex;flex-direction:column;gap:14px;align-items:center;width:100%;max-width:300px;padding:0 20px;}
+.mbtn{width:100%;background:rgba(0,0,0,0.35);font-family:'Rajdhani',sans-serif;font-size:clamp(15px,4vw,18px);font-weight:700;letter-spacing:3px;padding:14px 20px;border-radius:7px;cursor:pointer;text-transform:uppercase;transition:all 0.18s;-webkit-tap-highlight-color:transparent;}
+.mbtn.cr{border:2px solid #00ffe7;color:#00ffe7;text-shadow:0 0 7px #00ffe7;}
+.mbtn.ru{border:2px solid #ff2d78;color:#ff2d78;text-shadow:0 0 7px #ff2d78;}
+.mbtn.cr:active{background:rgba(0,255,231,0.12);}
+.mbtn.ru:active{background:rgba(255,45,120,0.12);}
+.mdesc{font-size:11px;color:rgba(255,255,255,0.35);letter-spacing:1px;margin-top:-6px;text-align:center;}
 </style>
 </head>
 <body>
-
-<canvas id="gameCanvas"></canvas>
-<div id="scanlines"></div>
-
+<canvas id="c"></canvas>
+<div id="sc"></div>
 <div id="hud">
-  <div id="mode-badge">CRUISE MODE</div>
-  <div id="hud-top">
-    <div id="hud-distance">0.0 km</div>
-    <div id="hud-combo" class="hidden">x1</div>
-  </div>
-  <div id="radio-hud">
-    <div id="radio-bar">
-      <div id="radio-dot"></div>
-      <div id="radio-text">
-        <div id="radio-label">♪ now playing</div>
-        <div id="pumpo-song-marquee">Radio Pumpo — Tune In</div>
-      </div>
-      <button id="pumpo-radio-toggle">TUNE IN</button>
-    </div>
-  </div>
-  <div id="near-miss-flash"></div>
-  <div id="crash-overlay"></div>
-  <div id="billboard-msg"></div>
+  <div id="mode-badge">IDLE</div>
+  <div id="near-miss"></div>
+  <div id="crash-flash"></div>
+  <div id="billboard"></div>
 </div>
-
-<div id="touch-left"></div>
-<div id="touch-right"></div>
-
-<div id="menu-screen">
-  <div class="menu-logo">RADIO PUMPO</div>
-  <div class="menu-sub">Drive</div>
-  <div class="menu-buttons">
-    <button class="menu-btn cruise" id="btn-cruise">Cruise Mode</button>
-    <div class="menu-mode-desc">meditative · no fail · long sessions</div>
-    <button class="menu-btn rush" id="btn-rush">Rush Mode</button>
-    <div class="menu-mode-desc">dopamine · near misses · one more run</div>
+<div id="tl"></div><div id="tr"></div>
+<div id="menu">
+  <div class="logo">RADIO PUMPO</div>
+  <div class="sub">Drive</div>
+  <div class="btns">
+    <button class="mbtn cr" id="btn-cr">Start Cruise</button>
+    <div class="mdesc">meditative · slow lanes · infinite glide</div>
+    <button class="mbtn ru" id="btn-ru">Start Rush</button>
+    <div class="mdesc">high speed · near misses · one more run</div>
   </div>
 </div>
-
 <script>
 'use strict';
+(function(){
 
-// ============================================================
-//  RADIO PUMPO DRIVE - Phase 1 POC
-// ============================================================
+// ─── CANVAS ──────────────────────────────────────────────────────────────────
+var C=document.getElementById('c'), ctx=C.getContext('2d');
+var W=0,H=0,DPR=1;
+function resize(){
+  DPR=Math.min(window.devicePixelRatio||1,2);
+  W=C.width =window.innerWidth *DPR;
+  H=C.height=window.innerHeight*DPR;
+  C.style.width =window.innerWidth +'px';
+  C.style.height=window.innerHeight+'px';
+}
+resize(); window.addEventListener('resize',resize);
 
-(function GAME() {
-
-// Safe roundRect helper (Safari compat)
-function rrect(x, y, w, h, r) {
-  r = Math.min(r || 0, Math.abs(w) / 2, Math.abs(h) / 2);
+// ─── RRECT (Safari safe) ─────────────────────────────────────────────────────
+function rr(x,y,w,h,r){
+  r=Math.min(r||0,Math.abs(w)/2,Math.abs(h)/2);
   ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.arcTo(x + w, y, x + w, y + r, r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
-  ctx.lineTo(x + r, y + h);
-  ctx.arcTo(x, y + h, x, y + h - r, r);
-  ctx.lineTo(x, y + r);
-  ctx.arcTo(x, y, x + r, y, r);
-  ctx.closePath();
+  ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);
+  ctx.arcTo(x+w,y,x+w,y+r,r);ctx.lineTo(x+w,y+h-r);
+  ctx.arcTo(x+w,y+h,x+w-r,y+h,r);ctx.lineTo(x+r,y+h);
+  ctx.arcTo(x,y+h,x,y+h-r,r);ctx.lineTo(x,y+r);
+  ctx.arcTo(x,y,x+r,y,r);ctx.closePath();
+}
+function shade(hex,d){
+  var n=parseInt((hex||'#888').replace('#',''),16)||0;
+  var r=Math.max(0,Math.min(255,(n>>16)+d));
+  var g=Math.max(0,Math.min(255,((n>>8)&0xff)+d));
+  var b=Math.max(0,Math.min(255,(n&0xff)+d));
+  return 'rgb('+r+','+g+','+b+')';
 }
 
-var canvas = document.getElementById('gameCanvas');
-var ctx    = canvas.getContext('2d');
-var W = 0, H = 0;
+// ─── STATE ───────────────────────────────────────────────────────────────────
+var MODE='idle', inGame=false;
+var rTime=0;
 
-function resize() {
-  var dpr = window.devicePixelRatio || 1;
-  W = canvas.width  = window.innerWidth  * dpr;
-  H = canvas.height = window.innerHeight * dpr;
-  canvas.style.width  = window.innerWidth  + 'px';
-  canvas.style.height = window.innerHeight + 'px';
+// ─── RAIN ────────────────────────────────────────────────────────────────────
+var rainDrops=[], rainIntensity=0, rainTarget=0;
+var rainTimer=0;
+function initRain(){
+  rainDrops=[];
+  for(var i=0;i<120;i++){
+    rainDrops.push({x:Math.random(),y:Math.random(),len:0.04+Math.random()*0.06,spd:0.008+Math.random()*0.006,a:0.3+Math.random()*0.5});
+  }
 }
-resize();
-window.addEventListener('resize', resize);
+initRain();
 
-var gameMode = 'cruise';
-var inGame   = false;
-
-// Input
-var keys = { left: false, right: false };
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'ArrowLeft'  || e.key === 'a' || e.key === 'A') keys.left  = true;
-  if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = true;
+// ─── INPUT ───────────────────────────────────────────────────────────────────
+var keys={left:false,right:false};
+document.addEventListener('keydown',function(e){
+  if(e.key==='ArrowLeft'||e.key==='a'||e.key==='A')keys.left=true;
+  if(e.key==='ArrowRight'||e.key==='d'||e.key==='D')keys.right=true;
 });
-document.addEventListener('keyup', function(e) {
-  if (e.key === 'ArrowLeft'  || e.key === 'a' || e.key === 'A') keys.left  = false;
-  if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = false;
+document.addEventListener('keyup',function(e){
+  if(e.key==='ArrowLeft'||e.key==='a'||e.key==='A')keys.left=false;
+  if(e.key==='ArrowRight'||e.key==='d'||e.key==='D')keys.right=false;
+});
+var tl=document.getElementById('tl'),tr=document.getElementById('tr');
+tl.addEventListener('touchstart',function(){if(inGame)keys.left=true;},{passive:true});
+tl.addEventListener('touchend',function(){keys.left=false;},{passive:true});
+tl.addEventListener('touchcancel',function(){keys.left=false;});
+tr.addEventListener('touchstart',function(){if(inGame)keys.right=true;},{passive:true});
+tr.addEventListener('touchend',function(){keys.right=false;},{passive:true});
+tr.addEventListener('touchcancel',function(){keys.right=false;});
+
+// Drag steering
+var dragX0=null,dragLast=null,isDrag=false;
+C.addEventListener('touchstart',function(e){
+  dragX0=e.touches[0].clientX; dragLast=dragX0; isDrag=false;
+},{passive:true});
+C.addEventListener('touchmove',function(e){
+  if(dragX0===null)return;
+  var dx=e.touches[0].clientX-dragX0;
+  if(Math.abs(dx)>5)isDrag=true;
+  if(isDrag&&inGame){
+    var delta=e.touches[0].clientX-dragLast;
+    dragLast=e.touches[0].clientX;
+    car.laneX=Math.max(-1,Math.min(1,car.laneX+delta*0.011));
+    var nl=Math.round(car.laneX+1);
+    car.lane=Math.max(0,Math.min(LANES-1,nl));
+    car.wheelTgt=car.laneX*44;
+  }
+  e.preventDefault();
+},{passive:false});
+C.addEventListener('touchend',function(e){
+  if(!isDrag&&e.changedTouches.length){
+    var t=e.changedTouches[0];
+    var b=window._rBtn;
+    if(b){var cx=t.clientX*DPR,cy=t.clientY*DPR;if(cx>=b.x&&cx<=b.x+b.w&&cy>=b.y&&cy<=b.y+b.h){if(window.radioToggle)window.radioToggle();}}
+  }
+  dragX0=null;isDrag=false;
+},{passive:true});
+C.addEventListener('mousedown',function(e){dragX0=e.clientX;dragLast=dragX0;isDrag=false;});
+C.addEventListener('mousemove',function(e){
+  if(e.buttons&&dragX0!==null){
+    var dx=e.clientX-dragX0;
+    if(Math.abs(dx)>5)isDrag=true;
+    if(isDrag&&inGame){var d=e.clientX-dragLast;dragLast=e.clientX;car.laneX=Math.max(-1,Math.min(1,car.laneX+d*0.011));var nl=Math.round(car.laneX+1);car.lane=Math.max(0,Math.min(LANES-1,nl));car.wheelTgt=car.laneX*44;}
+  }
+});
+C.addEventListener('mouseup',function(e){
+  if(!isDrag){var b=window._rBtn;if(b){var cx=e.clientX*DPR,cy=e.clientY*DPR;if(cx>=b.x&&cx<=b.x+b.w&&cy>=b.y&&cy<=b.y+b.h){if(window.radioToggle)window.radioToggle();}}}
+  dragX0=null;isDrag=false;
 });
 
-var tl = document.getElementById('touch-left');
-var tr = document.getElementById('touch-right');
-tl.addEventListener('touchstart', function() { keys.left  = true;  }, { passive: true });
-tl.addEventListener('touchend',   function() { keys.left  = false; }, { passive: true });
-tl.addEventListener('touchcancel',function() { keys.left  = false; });
-tr.addEventListener('touchstart', function() { keys.right = true;  }, { passive: true });
-tr.addEventListener('touchend',   function() { keys.right = false; }, { passive: true });
-tr.addEventListener('touchcancel',function() { keys.right = false; });
-canvas.addEventListener('touchstart', function(e) { e.preventDefault(); }, { passive: false });
-canvas.addEventListener('touchmove',  function(e) { e.preventDefault(); }, { passive: false });
+// ─── CAR ─────────────────────────────────────────────────────────────────────
+var LANES=3;
+var car={lane:1,laneX:0,laneXTgt:0,wheel:0,wheelTgt:0,cooldown:0,crashFlash:0};
+function laneNorm(l){return l-1;}
 
-// Car
-var LANES = 3;
-var car = { lane: 1, laneX: 0, laneXTarget: 0, cooldown: 0, crashFlash: 0 };
-
-function laneToX(lane) { return (lane - 1); }
-
-// Road
-var ROAD_SEGS_TOTAL = 600;
-var NUM_DRAW_SEGS   = 120;
-var roadSegs = [];
-var scrollPos = 0;
-
-function initRoad() {
-  roadSegs = [];
-  for (var i = 0; i < ROAD_SEGS_TOTAL; i++) {
-    var phase = (i / ROAD_SEGS_TOTAL) * Math.PI * 12;
-    var curve = Math.sin(phase * 0.7) * 0.5 + Math.sin(phase * 0.3) * 0.3;
-    roadSegs.push({ curve: curve, alt: i % 2 });
+// ─── ROAD ─────────────────────────────────────────────────────────────────────
+// OutRun-style: each segment stores curve value
+// We project using a proper perspective divide
+var NSEGS=600, NDRAW=100; // 100 segments — enough depth, low draw cost
+var road=[], scroll=0;
+function initRoad(){
+  road=[];
+  for(var i=0;i<NSEGS;i++){
+    var p=(i/NSEGS)*Math.PI*8;
+    road.push({c:Math.sin(p*0.55)*0.35+Math.sin(p*0.22)*0.18, alt:i%2});
   }
 }
 
-function project(frac) {
-  var depth = 0.96;
-  var scale = 1 / (1 - frac * depth + 0.001);
-  var horizonY = H * 0.44;
-  var y = horizonY + frac * (H - horizonY);
-  var roadHalfW = scale * W * 0.28;
-  return { y: y, roadHalfW: roadHalfW, scale: scale };
+// PROJECTION: the key fix.
+// HY = horizon Y fraction of TOTAL screen height
+// Road bottom = dashY exactly (where the dashboard starts)
+// We project segment n out of NDRAW:
+//   depth = n/NDRAW  (0=horizon, 1=nearest)
+//   screen Y = horizonY + (dashY - horizonY) * depth^0.48   — accelerating near cam
+//   scale = 1/(1 - depth*0.96 + 0.001)
+//   road half-width at screen = scale * BASE_HW
+//   BASE_HW tuned so road fills ~90% of screen width at depth=1
+var HY=0.42;
+var BASE_HW=0.14; // fraction of W for road half-width at scale=1
+
+function proj(depth){
+  var hy=H*HY;
+  var dashY=H*DASH_FRAC;
+  var sc=1/(1-depth*0.96+0.001);
+  var y=hy+(dashY-hy)*Math.pow(depth,0.48);
+  var hw=sc*W*BASE_HW;
+  return {y:y,hw:hw,sc:sc};
 }
 
-// Obstacles
-var obstacles = [];
-var spawnTimer = 0;
-var spawnInterval = 200;
+var DASH_FRAC=0.58; // dashboard starts at 58% of screen height
 
-function spawnObstacle() {
-  var lane = Math.floor(Math.random() * LANES);
-  var cols = ['#c0392b','#2471a3','#d4ac0d','#7d3c98','#16a085'];
-  obstacles.push({
-    lane: lane,
-    depth: 0.02,
-    hit: false,
-    missed: false,
-    col: cols[Math.floor(Math.random() * cols.length)]
-  });
-}
-
-// Metrics
-var distance  = 0;
-var combo     = 0;
-var speed     = 0;
-var targetSpd = 0;
-var rushTime  = 0;
-
-// Particles
-var particles = [];
-function burst(x, y) {
-  for (var i = 0; i < 14; i++) {
-    var ang = Math.random() * Math.PI * 2;
-    var spd = 2 + Math.random() * 5;
-    particles.push({
-      x: x, y: y,
-      vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd,
-      life: 1, decay: 0.04 + Math.random() * 0.04,
-      r: 2 + Math.random() * 3,
-      col: Math.random() > 0.5 ? '#00ffe7' : '#ff2d78'
-    });
+// Built segment list with accumulated curve
+// Returns array of {y,l,r,seg} for use by both road draw and obstacle placement
+var _segs=[];
+function buildSegs(){
+  _segs=[];
+  var cx2=0;
+  // Camera pan: vanishing point shifts with car.laneX
+  var camPan=car.laneX*W*0.06;
+  for(var n=0;n<NDRAW;n++){
+    var depth=n/(NDRAW-1); // 0=horizon, 1=near
+    var p=proj(depth);
+    var idx=Math.floor(scroll+(NDRAW-1-n)*0.5)%NSEGS; // far segments = older scroll
+    var seg=road[idx<0?idx+NSEGS:idx];
+    cx2+=seg.c*(1-depth)*0.32;
+    // Camera pan fades to 0 at horizon (1-depth), full at camera (depth=1... wait, inverted)
+    // depth=0 is horizon, depth=1 is near — pan should be FULL at near, fade at horizon
+    var cx=W/2+camPan*depth+cx2*W*0.038;
+    _segs.push({seg:seg,y:p.y,l:cx-p.hw,r:cx+p.hw,hw:p.hw,cx:cx,depth:depth});
   }
 }
 
-// Shake
-var shakeMag = 0, shakeX = 0, shakeY = 0;
-function shake(m) { shakeMag = Math.max(shakeMag, m); }
-
-// Billboard
-var SIGNS = [
-  '"You made it this far."',
-  '"No destination required."',
-  '"Maybe today changes everything."',
-  '"Are you becoming who you imagined?"',
-  '"Keep driving."',
-  '"Radio Pumpo. Always on."',
-  '"Still here. Still moving."',
-  '"The road remembers."'
-];
-var signTimer = 1800, lastSign = -1;
-function showSign() {
-  var i;
-  do { i = Math.floor(Math.random() * SIGNS.length); } while (i === lastSign);
-  lastSign = i;
-  var el = document.getElementById('billboard-msg');
-  el.textContent = SIGNS[i];
-  el.style.opacity = '1';
-  setTimeout(function() { el.style.opacity = '0'; }, 3500);
+// ─── OBSTACLES ───────────────────────────────────────────────────────────────
+var obs=[],spawnT=0,spawnIv=220;
+function spawnObs(){
+  var cols=['#ff2a6d','#05d9e8','#f39c12','#9b59b6','#2ecc71','#e74c3c'];
+  // Spawn at segment index 5 (near horizon)
+  obs.push({lane:Math.floor(Math.random()*LANES),segN:2,hit:false,missed:false,
+            color:cols[Math.floor(Math.random()*cols.length)]});
 }
 
-// Stars
-var stars = [];
-for (var si = 0; si < 70; si++) {
-  stars.push({
-    x: Math.random(), y: Math.random() * 0.44,
-    s: 0.4 + Math.random() * 1.2,
-    a: 0.2 + Math.random() * 0.55,
-    spd: 0.3 + Math.random() * 0.7
-  });
-}
+// ─── METRICS ─────────────────────────────────────────────────────────────────
+var dist=0,combo=0,speed=0.9,tSpeed=0.9,crashLock=0;
 
-// Game loop
-var lastTs = 0, animId = null, crashLock = 0;
-
-function startGame(mode) {
-  gameMode  = mode;
-  inGame    = true;
-  distance  = 0; combo = 0; rushTime = 0;
-  scrollPos = 0; obstacles = []; particles = [];
-  spawnTimer = 0; crashLock = 0; shakeMag = 0;
-  car.lane = 1; car.laneX = 0; car.laneXTarget = 0;
-  car.cooldown = 0; car.crashFlash = 0;
-  speed = targetSpd = mode === 'rush' ? 1.8 : 1.0;
-  spawnInterval = mode === 'rush' ? 140 : 310;
-  signTimer = 1600;
-
-  var badge = document.getElementById('mode-badge');
-  badge.textContent = mode === 'rush' ? 'RUSH MODE' : 'CRUISE MODE';
-  badge.style.color = mode === 'rush' ? '#ff2d78' : '#00ffe7';
-  badge.style.textShadow = mode === 'rush' ? '0 0 10px #ff2d78' : '0 0 10px #00ffe7';
-
-  tl.style.pointerEvents = 'all';
-  tr.style.pointerEvents = 'all';
-
-  initRoad();
-  if (animId) cancelAnimationFrame(animId);
-  lastTs = performance.now();
-  animId = requestAnimationFrame(loop);
-}
-
-function loop(ts) {
-  var dt = Math.min((ts - lastTs) / 16.667, 3);
-  lastTs = ts;
-  update(dt);
-  render();
-  animId = requestAnimationFrame(loop);
-}
-
-function update(dt) {
-  if (!inGame) return;
-
-  if (car.cooldown > 0) {
-    car.cooldown -= dt;
-  } else {
-    if (keys.left  && car.lane > 0)         { car.lane--; car.cooldown = 16; }
-    if (keys.right && car.lane < LANES - 1) { car.lane++; car.cooldown = 16; }
+// ─── PARTICLES ───────────────────────────────────────────────────────────────
+var parts=[];
+function burst(x,y,col){
+  for(var i=0;i<12;i++){
+    var a=Math.random()*Math.PI*2,s=1+Math.random()*3.5;
+    parts.push({x:x,y:y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-0.5,life:1,dec:0.035+Math.random()*0.03,r:2+Math.random()*3,col:col||'#00ffe7'});
   }
-  car.laneXTarget = laneToX(car.lane);
-  car.laneX += (car.laneXTarget - car.laneX) * 0.16 * dt;
+}
 
-  if (gameMode === 'rush') {
-    rushTime += dt;
-    var ramp = rushTime < 60*3.6 ? 1.8 : rushTime < 60*3.6*3 ? 2.6 : rushTime < 60*3.6*5 ? 3.6 : 5.0;
-    targetSpd = ramp;
-    spawnInterval = Math.max(40, 140 - rushTime / 80);
-  } else {
-    targetSpd = 1.0 + Math.sin(Date.now() / 9000) * 0.2;
+// ─── SHAKE ───────────────────────────────────────────────────────────────────
+var shk=0,shkX=0,shkY=0;
+function shake(m){shk=Math.max(shk,m);}
+
+// ─── STARS ───────────────────────────────────────────────────────────────────
+var stars=[];
+for(var si=0;si<80;si++){
+  stars.push({x:Math.random(),y:Math.random()*HY,s:0.4+Math.random()*1.3,a:0.25+Math.random()*0.55,tw:Math.random()*6.28,tws:0.01+Math.random()*0.025});
+}
+
+// ─── SIGNS ───────────────────────────────────────────────────────────────────
+var SIGNS=['"You made it this far."','"No destination required."','"Maybe today changes everything."','"Keep driving."','"Radio Pumpo. Always on."','"The road remembers."'];
+var signT=1400,lastSign=-1;
+function showSign(){
+  var i;do{i=Math.floor(Math.random()*SIGNS.length);}while(i===lastSign);lastSign=i;
+  var el=document.getElementById('billboard');el.textContent=SIGNS[i];el.style.opacity='1';
+  setTimeout(function(){el.style.opacity='0';},3000);
+}
+
+// ─── AI DRIVER ───────────────────────────────────────────────────────────────
+var ai={timer:0,tgt:1,phase:0};
+function aiUpdate(dt){
+  ai.timer+=dt; ai.phase+=dt*0.007;
+  if(ai.timer>180+Math.random()*80){
+    ai.timer=0;
+    var clear=[0,1,2];
+    for(var i=0;i<obs.length;i++){if(obs[i].segN>NDRAW*0.35&&obs[i].segN<NDRAW*0.75)clear=clear.filter(function(l){return l!==obs[i].lane;});}
+    ai.tgt=clear.length?clear[Math.floor(Math.random()*clear.length)]:Math.floor(Math.random()*LANES);
   }
-  speed += (targetSpd - speed) * 0.035 * dt;
+  car.lane=ai.tgt;
+}
 
-  scrollPos = (scrollPos + speed * dt * 0.015) % ROAD_SEGS_TOTAL;
-  distance += speed * dt * 0.00028;
+// ─── START ───────────────────────────────────────────────────────────────────
+function startGame(mode){
+  MODE=mode; inGame=(mode!=='idle');
+  dist=0;combo=0;rTime=0;scroll=0;obs=[];parts=[];spawnT=0;crashLock=0;shk=0;
+  car.lane=1;car.laneX=0;car.laneXTgt=0;car.wheel=0;car.wheelTgt=0;car.cooldown=0;car.crashFlash=0;
+  speed=tSpeed=(mode==='rush')?1.9:1.0;
+  spawnIv=(mode==='rush')?110:240;
+  ai.timer=0;ai.tgt=1;signT=1200;
+  // Rain: random chance in rush mode
+  rainTarget=(mode==='rush'&&Math.random()>0.4)?0.8:(Math.random()>0.7?0.4:0);
 
-  spawnTimer += dt;
-  if (spawnTimer >= spawnInterval) {
-    spawnTimer = 0;
-    if (gameMode === 'rush' || obstacles.length < 2) spawnObstacle();
+  var badge=document.getElementById('mode-badge');
+  if(mode==='rush'){badge.textContent='RUSH MODE';badge.style.color='#ff2d78';badge.style.textShadow='0 0 8px #ff2d78';}
+  else if(mode==='cruise'){badge.textContent='CRUISE MODE';badge.style.color='#00ffe7';badge.style.textShadow='0 0 8px #00ffe7';}
+  else{badge.textContent='IDLE';badge.style.color='#b24bff';badge.style.textShadow='0 0 8px #b24bff';}
+
+  if(inGame){tl.style.pointerEvents='all';tr.style.pointerEvents='all';}
+}
+
+// ─── LOOP ────────────────────────────────────────────────────────────────────
+var lastTs=0;
+function loop(ts){
+  var dt=Math.min((ts-lastTs)/16.667,3);lastTs=ts;
+  update(dt);render();
+  requestAnimationFrame(loop);
+}
+
+// ─── UPDATE ──────────────────────────────────────────────────────────────────
+function update(dt){
+  rTime+=dt;
+
+  // Speed
+  if(MODE==='idle') tSpeed=0.80+Math.sin(rTime*0.005)*0.10;
+  else if(MODE==='cruise') tSpeed=1.05+Math.sin(rTime*0.008)*0.12;
+  else{var ramp=rTime<200?1.9:rTime<600?2.6:rTime<1200?3.4:4.2;tSpeed=ramp;spawnIv=Math.max(45,110-rTime*0.035);}
+  speed+=(tSpeed-speed)*0.04*dt;
+
+  // Steering
+  if(MODE==='idle'){aiUpdate(dt);}
+  else{
+    if(car.cooldown>0){car.cooldown-=dt;}
+    else{
+      if(keys.left&&car.lane>0){car.lane--;car.cooldown=(MODE==='rush')?11:20;}
+      if(keys.right&&car.lane<LANES-1){car.lane++;car.cooldown=(MODE==='rush')?11:20;}
+    }
   }
+  car.laneXTgt=laneNorm(car.lane);
+  var lf=MODE==='rush'?0.12:MODE==='cruise'?0.038:0.048;
+  car.laneX+=(car.laneXTgt-car.laneX)*lf*dt;
+  car.wheelTgt=(car.laneXTgt-car.laneX)*50;
+  car.wheel+=(car.wheelTgt-car.wheel)*0.14*dt;
 
-  for (var i = obstacles.length - 1; i >= 0; i--) {
-    var o = obstacles[i];
-    o.depth += speed * dt * 0.0035 * (0.2 + o.depth * 2.8);
+  // Road scroll
+  scroll=(scroll+speed*dt*0.028)%NSEGS;
+  dist+=speed*dt*0.00028;
 
-    if (!o.missed && !o.hit && o.depth > 0.75 && o.depth < 0.88) {
-      if (o.lane !== car.lane) {
-        o.missed = true;
-        if (Math.abs(o.lane - car.lane) === 1) triggerNearMiss(o);
+  // Build segment list (used by both draw and collision)
+  buildSegs();
+
+  // Spawn
+  spawnT+=dt;
+  if(spawnT>=spawnIv){spawnT=0;if(MODE==='rush'||obs.length<3)spawnObs();}
+
+  // Obstacle advance — they move along the segment list toward viewer
+  for(var i=obs.length-1;i>=0;i--){
+    var o=obs[i];
+    // Advance segment index (0=horizon end, NDRAW-1=near end)
+    o.segN+=speed*dt*0.14*(0.5+o.segN/NDRAW*1.5);
+
+    // Near-miss: segN in 60-75% of NDRAW, different lane
+    if(!o.missed&&!o.hit&&o.segN>NDRAW*0.60&&o.segN<NDRAW*0.76){
+      if(o.lane!==car.lane){
+        o.missed=true;
+        if(Math.abs(o.lane-car.lane)===1&&inGame) doNearMiss(o);
       }
     }
-    if (!o.hit && !o.missed && o.depth > 0.80 && o.depth < 0.94 && o.lane === car.lane) {
-      o.hit = true;
-      triggerCrash();
+    // Collision: segN in 68-82%, same lane
+    if(!o.hit&&!o.missed&&o.segN>NDRAW*0.68&&o.segN<NDRAW*0.84&&o.lane===car.lane){
+      o.hit=true;
+      if(inGame) doCrash(); else car.lane=(car.lane+1)%LANES;
     }
-    if (o.depth > 1.1) obstacles.splice(i, 1);
+    if(o.segN>=NDRAW)obs.splice(i,1);
   }
 
-  for (var pi = particles.length - 1; pi >= 0; pi--) {
-    var p = particles[pi];
-    p.x += p.vx; p.y += p.vy; p.vy += 0.15;
-    p.life -= p.decay;
-    if (p.life <= 0) particles.splice(pi, 1);
+  // Particles
+  for(var pi=parts.length-1;pi>=0;pi--){
+    var p=parts[pi];p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=0.10*dt;p.life-=p.dec*dt;
+    if(p.life<=0)parts.splice(pi,1);
   }
 
-  if (shakeMag > 0) {
-    shakeX = (Math.random() - 0.5) * shakeMag * 2;
-    shakeY = (Math.random() - 0.5) * shakeMag * 2;
-    shakeMag *= 0.80;
-    if (shakeMag < 0.3) shakeMag = 0;
-  } else { shakeX = shakeY = 0; }
+  // Shake
+  if(shk>0.2){shkX=(Math.random()-0.5)*shk*2;shkY=(Math.random()-0.5)*shk*2;shk*=0.80;}
+  else{shkX=shkY=shk=0;}
 
-  if (car.crashFlash > 0) car.crashFlash -= dt;
-  if (crashLock > 0) crashLock -= dt;
+  if(car.crashFlash>0) car.crashFlash-=dt;
+  if(crashLock>0) crashLock-=dt;
 
-  signTimer -= dt;
-  if (signTimer <= 0) { showSign(); signTimer = 1600 + Math.random() * 700; }
+  signT-=dt;if(signT<=0){showSign();signT=1300+Math.random()*600;}
 
-  for (var sti = 0; sti < stars.length; sti++) {
-    stars[sti].y += stars[sti].spd * speed * dt * 0.0003;
-    if (stars[sti].y > 0.44) { stars[sti].y = 0; stars[sti].x = Math.random(); }
-  }
+  // Stars twinkle
+  for(var sti=0;sti<stars.length;sti++) stars[sti].tw+=stars[sti].tws*dt;
 
-  document.getElementById('hud-distance').textContent = distance.toFixed(1) + ' km';
-  var cel = document.getElementById('hud-combo');
-  if (combo >= 2) { cel.classList.remove('hidden'); cel.textContent = 'x' + combo; }
-  else cel.classList.add('hidden');
+  // Rain
+  rainTimer+=dt;
+  if(rainTimer>400){rainTimer=0;rainTarget=rainIntensity>0.1?0:(Math.random()>0.55?0.6+Math.random()*0.4:0);}
+  rainIntensity+=(rainTarget-rainIntensity)*0.005*dt;
+
+  // HUD
+  document.getElementById('mode-badge');
 }
 
-var nmTimeout = null;
-function triggerNearMiss(o) {
+var nmTO=null;
+function doNearMiss(o){
   combo++;
-  var pts = combo >= 3 ? 100 : 50;
-  var fl = document.getElementById('near-miss-flash');
-  fl.textContent = combo >= 3 ? ('NEAR MISS  x' + combo + '  +' + (pts * combo)) : ('NEAR MISS  +' + pts);
-  fl.style.opacity = '1';
-  if (nmTimeout) clearTimeout(nmTimeout);
-  nmTimeout = setTimeout(function() { fl.style.opacity = '0'; }, 900);
-  shake(3);
-  burst(W / 2 + car.laneX * W * 0.18, H * 0.78);
+  var el=document.getElementById('near-miss');
+  el.textContent=combo>=3?'NEAR MISS  x'+combo+'  +'+(combo*100):'NEAR MISS  +50';
+  el.style.opacity='1';
+  if(nmTO)clearTimeout(nmTO);
+  nmTO=setTimeout(function(){el.style.opacity='0';},820);
+  shake(3.5);
+  // Find segment for this obstacle to get screen position
+  var sn=Math.min(Math.floor(o.segN),_segs.length-1);
+  var seg=_segs[sn];
+  if(seg){var lt=(o.lane+0.5)/LANES;var ox=seg.l+lt*(seg.r-seg.l);burst(ox,seg.y,'#00ffe7');}
+}
+function doCrash(){
+  if(crashLock>0)return;
+  crashLock=30;combo=0;
+  shake(MODE==='rush'?13:7);car.crashFlash=18;
+  var ov=document.getElementById('crash-flash');ov.style.opacity='1';
+  setTimeout(function(){ov.style.opacity='0';},180);
+  speed*=0.52;tSpeed*=0.70;
 }
 
-function triggerCrash() {
-  if (crashLock > 0) return;
-  crashLock = 35;
-  combo = 0;
-  shake(gameMode === 'rush' ? 12 : 6);
-  car.crashFlash = 20;
-  var ov = document.getElementById('crash-overlay');
-  ov.style.opacity = '1';
-  setTimeout(function() { ov.style.opacity = '0'; }, 220);
-  if (gameMode === 'rush') { speed *= 0.55; targetSpd *= 0.75; }
-  else { speed *= 0.75; }
-}
-
-function render() {
+// ─── RENDER ──────────────────────────────────────────────────────────────────
+function render(){
   ctx.save();
-  if (shakeMag > 0.3) ctx.translate(shakeX, shakeY);
-  ctx.clearRect(0, 0, W, H);
-  var hy = H * 0.44;
+  ctx.clearRect(0,0,W,H);
+  if(shk>0.2)ctx.translate(shkX,shkY);
+  var hy=H*HY;
   drawSky(hy);
   drawStars(hy);
-  drawRoad(hy);
-  drawObstacles(hy);
-  drawCar(hy);
-  drawParticles();
-  ctx.restore();
-}
-
-function drawSky(hy) {
-  var g = ctx.createLinearGradient(0, 0, 0, hy);
-  if (gameMode === 'rush') {
-    g.addColorStop(0,    '#0d0018');
-    g.addColorStop(0.55, '#1a0035');
-    g.addColorStop(1,    '#dd1a00');
-  } else {
-    g.addColorStop(0,    '#06000e');
-    g.addColorStop(0.5,  '#1a0035');
-    g.addColorStop(1,    '#bb2a00');
-  }
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, W, hy);
-
-  drawRetroSun(hy);
-  drawSkyline(hy);
+  drawSun(hy);
+  drawCity(hy);
   drawPalms(hy);
-
-  var hg = ctx.createLinearGradient(0, hy - 60, 0, hy + 20);
-  hg.addColorStop(0,   'rgba(255,0,120,0)');
-  hg.addColorStop(0.4, 'rgba(255,0,120,0.28)');
-  hg.addColorStop(1,   'rgba(255,0,80,0)');
-  ctx.fillStyle = hg;
-  ctx.fillRect(0, hy - 60, W, 80);
-}
-
-function drawRetroSun(hy) {
-  var cx = W * 0.5;
-  var cy = hy * 0.62;
-  var r  = Math.min(W, hy) * 0.22;
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  ctx.clip();
-  var sg = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-  sg.addColorStop(0,    '#ffffff');
-  sg.addColorStop(0.15, '#ffaacc');
-  sg.addColorStop(0.45, '#ff2d9a');
-  sg.addColorStop(0.8,  '#cc0066');
-  sg.addColorStop(1,    '#880044');
-  ctx.fillStyle = sg;
-  ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
-  for (var i = 0; i < 8; i++) {
-    var t  = i / 8;
-    var sy = cy + t * r;
-    var sw = Math.sqrt(Math.max(0, r*r - (sy-cy)*(sy-cy))) * 2;
-    var sh = r / (8 * 1.8) * (1 + t * 1.2);
-    ctx.fillStyle = 'rgba(10,0,20,' + (0.55 + t * 0.3) + ')';
-    ctx.fillRect(cx - sw / 2, sy, sw, sh);
-  }
-  ctx.restore();
-  var og = ctx.createRadialGradient(cx, cy, r * 0.7, cx, cy, r * 2.2);
-  og.addColorStop(0,   'rgba(255,0,120,0.22)');
-  og.addColorStop(0.5, 'rgba(180,0,100,0.08)');
-  og.addColorStop(1,   'rgba(0,0,0,0)');
-  ctx.fillStyle = og;
-  ctx.beginPath();
-  ctx.arc(cx, cy, r * 2.2, 0, Math.PI * 2);
-  ctx.fill();
-}
-
-function drawSkyline(hy) {
-  var blds = [
-    [0.00,0.06,0.14],[0.07,0.04,0.18],[0.12,0.05,0.12],[0.18,0.03,0.22],
-    [0.22,0.05,0.16],[0.28,0.04,0.11],[0.33,0.06,0.19],[0.40,0.03,0.24],
-    [0.44,0.04,0.14],[0.49,0.05,0.20],[0.55,0.03,0.17],[0.59,0.06,0.13],
-    [0.66,0.04,0.21],[0.71,0.03,0.16],[0.75,0.05,0.12],[0.81,0.04,0.18],
-    [0.86,0.05,0.14],[0.92,0.04,0.20],[0.97,0.03,0.15]
-  ];
-  ctx.fillStyle = 'rgba(15,0,30,0.88)';
-  for (var i = 0; i < blds.length; i++) {
-    var b = blds[i];
-    ctx.fillRect(b[0]*W, hy - b[2]*hy*0.7, b[1]*W, b[2]*hy*0.7);
-  }
-  for (var i = 0; i < blds.length; i++) {
-    var b = blds[i];
-    var x = b[0]*W, w = b[1]*W, h = b[2]*hy*0.7;
-    for (var wy = hy-h+4; wy < hy-6; wy += 7) {
-      for (var wx = x+3; wx < x+w-3; wx += 6) {
-        if (Math.random() > 0.52) {
-          ctx.fillStyle = Math.random() > 0.6 ? 'rgba(0,220,255,0.55)' : 'rgba(255,60,160,0.45)';
-          ctx.fillRect(wx, wy, 2, 2);
-        }
-      }
-    }
-  }
-  var front = [
-    [0.00,0.07,0.10],[0.08,0.05,0.15],[0.14,0.08,0.09],[0.23,0.06,0.13],
-    [0.30,0.07,0.08],[0.38,0.05,0.12],[0.67,0.05,0.11],[0.73,0.08,0.09],
-    [0.82,0.06,0.13],[0.89,0.07,0.08],[0.97,0.03,0.11]
-  ];
-  ctx.fillStyle = 'rgba(6,0,15,0.96)';
-  for (var i = 0; i < front.length; i++) {
-    var b = front[i];
-    ctx.fillRect(b[0]*W, hy - b[2]*hy, b[1]*W, b[2]*hy);
-  }
-}
-
-function drawPalms(hy) {
-  drawPalm(W*0.06, hy, hy*0.55, -1);
-  drawPalm(W*0.94, hy, hy*0.55,  1);
-  drawPalm(W*0.16, hy, hy*0.38, -1);
-  drawPalm(W*0.84, hy, hy*0.38,  1);
-}
-
-function drawPalm(x, groundY, h, dir) {
-  ctx.save();
-  ctx.strokeStyle = '#08001a';
-  ctx.lineWidth   = Math.max(2, h * 0.03);
-  ctx.lineCap     = 'round';
-  var lean = dir * h * 0.12;
-  ctx.beginPath();
-  ctx.moveTo(x, groundY);
-  ctx.bezierCurveTo(x+lean*0.3, groundY-h*0.4, x+lean*0.7, groundY-h*0.75, x+lean, groundY-h);
-  ctx.stroke();
-  var tx = x+lean, ty = groundY-h;
-  var fronds = [[-0.5,-0.3],[0.5,-0.25],[0.0,-0.55],[-0.35,-0.55],[0.35,-0.50],[-0.6,-0.15],[0.6,-0.12]];
-  ctx.lineWidth = Math.max(1.5, h * 0.018);
-  for (var fi = 0; fi < fronds.length; fi++) {
-    var fx = fronds[fi][0], fy = fronds[fi][1];
-    ctx.beginPath();
-    ctx.moveTo(tx, ty);
-    ctx.quadraticCurveTo(tx+fx*h*0.3, ty+fy*h*0.35, tx+fx*h*0.55, ty+fy*h*0.5+h*0.08);
-    ctx.stroke();
-  }
+  drawRoad();       // uses _segs built in update
+  drawObstacles();  // uses _segs for positioning
+  drawParticles();
+  if(rainIntensity>0.02)drawRain(hy);
+  drawCockpit();
   ctx.restore();
 }
 
-function drawStars(hy) {
+// ─── SKY ─────────────────────────────────────────────────────────────────────
+function drawSky(hy){
+  var g=ctx.createLinearGradient(0,0,0,hy);
+  g.addColorStop(0,'#07000f');g.addColorStop(0.55,'#18002e');g.addColorStop(1,'#480040');
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,hy);
+  var hg=ctx.createLinearGradient(0,hy-50,0,hy+12);
+  hg.addColorStop(0,'rgba(255,0,120,0)');hg.addColorStop(0.5,'rgba(255,0,120,0.20)');hg.addColorStop(1,'rgba(255,0,80,0)');
+  ctx.fillStyle=hg;ctx.fillRect(0,hy-50,W,62);
+}
+function drawStars(hy){
   ctx.save();
-  for (var i = 0; i < stars.length; i++) {
-    var s = stars[i];
-    ctx.globalAlpha = s.a * Math.min(1, speed * 0.8 + 0.3);
-    ctx.fillStyle = '#fff';
-    if (s.s > 1.1) {
-      ctx.fillRect(s.x*W - s.s, s.y*hy, s.s*2, s.s*0.4);
-      ctx.fillRect(s.x*W - s.s*0.2, s.y*hy - s.s*0.8, s.s*0.4, s.s*1.6);
-    } else {
-      ctx.fillRect(s.x*W, s.y*hy, s.s, s.s);
-    }
+  for(var i=0;i<stars.length;i++){
+    var s=stars[i],tw=0.5+Math.sin(s.tw)*0.5;
+    ctx.globalAlpha=s.a*tw;ctx.fillStyle='#fff';
+    if(s.s>1.0){ctx.fillRect(s.x*W-s.s,s.y*hy,s.s*2,s.s*0.32);ctx.fillRect(s.x*W-s.s*0.16,s.y*hy-s.s*0.85,s.s*0.32,s.s*1.7);}
+    else ctx.fillRect(s.x*W,s.y*hy,s.s,s.s);
   }
-  ctx.globalAlpha = 1;
+  ctx.globalAlpha=1;ctx.restore();
+}
+function drawSun(hy){
+  var cx=W*0.5,cy=hy*0.68,r=Math.min(W*0.5,hy)*0.28;
+  ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.clip();
+  var sg=ctx.createLinearGradient(cx,cy-r,cx,cy+r);
+  sg.addColorStop(0,'#fffbe0');sg.addColorStop(0.18,'#ffcc00');sg.addColorStop(0.42,'#ff2d9a');sg.addColorStop(0.75,'#cc0066');sg.addColorStop(1,'#550030');
+  ctx.fillStyle=sg;ctx.fillRect(cx-r,cy-r,r*2,r*2);
+  for(var i=0;i<11;i++){var t=i/11,sy=cy-r*0.05+t*r*1.05,chord=Math.sqrt(Math.max(0,r*r-(sy-cy)*(sy-cy)))*2,th=r/(11*1.6)*(1+t*1.3);ctx.fillStyle='rgba(8,0,18,'+(0.5+t*0.36)+')';ctx.fillRect(cx-chord/2,sy,chord,th);}
+  ctx.restore();
+  var og=ctx.createRadialGradient(cx,cy,r*0.72,cx,cy,r*2.2);
+  og.addColorStop(0,'rgba(255,40,120,0.18)');og.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=og;ctx.beginPath();ctx.arc(cx,cy,r*2.2,0,Math.PI*2);ctx.fill();
+}
+function drawCity(hy){
+  var back=[[0.00,0.06,0.16],[0.07,0.04,0.22],[0.12,0.05,0.13],[0.18,0.03,0.26],[0.22,0.06,0.17],[0.29,0.04,0.12],[0.34,0.07,0.21],[0.42,0.03,0.27],[0.46,0.05,0.15],[0.52,0.04,0.23],[0.57,0.06,0.13],[0.64,0.04,0.19],[0.69,0.03,0.26],[0.73,0.06,0.15],[0.80,0.04,0.21],[0.85,0.06,0.13],[0.92,0.04,0.19],[0.97,0.03,0.17]];
+  ctx.save();
+  ctx.fillStyle='rgba(11,0,24,0.88)';
+  for(var i=0;i<back.length;i++){var b=back[i];ctx.fillRect(b[0]*W,hy-b[2]*hy*0.72,b[1]*W,b[2]*hy*0.72);}
+  for(var i=0;i<back.length;i++){
+    var b=back[i],bx=b[0]*W,bw=b[1]*W,bh=b[2]*hy*0.72;
+    for(var wy=hy-bh+5;wy<hy-5;wy+=8)for(var wx=bx+3;wx<bx+bw-3;wx+=7)if(Math.random()>0.5){ctx.fillStyle=Math.random()>0.55?'rgba(0,200,255,0.48)':'rgba(255,60,160,0.38)';ctx.fillRect(wx,wy,2,3);}
+  }
+  var front=[[0.00,0.08,0.10],[0.09,0.06,0.14],[0.16,0.09,0.08],[0.26,0.07,0.13],[0.34,0.08,0.09],[0.43,0.06,0.13],[0.66,0.06,0.11],[0.73,0.09,0.09],[0.83,0.07,0.14],[0.91,0.08,0.09]];
+  ctx.fillStyle='rgba(5,0,11,0.97)';
+  for(var i=0;i<front.length;i++){var b=front[i];ctx.fillRect(b[0]*W,hy-b[2]*hy,b[1]*W,b[2]*hy);ctx.fillStyle='rgba(255,0,120,0.48)';ctx.fillRect(b[0]*W,hy-b[2]*hy,b[1]*W,1.5);ctx.fillStyle='rgba(5,0,11,0.97)';}
+  ctx.restore();
+}
+function drawPalms(hy){
+  dPalm(W*0.05,hy,hy*0.56,-1);dPalm(W*0.95,hy,hy*0.56,1);
+  dPalm(W*0.15,hy,hy*0.38,-1);dPalm(W*0.85,hy,hy*0.38,1);
+}
+function dPalm(x,gy,h,dir){
+  var lean=dir*h*0.14;
+  ctx.save();ctx.strokeStyle='#06001a';ctx.lineCap='round';ctx.lineWidth=Math.max(2,h*0.033);
+  ctx.beginPath();ctx.moveTo(x,gy);ctx.bezierCurveTo(x+lean*0.3,gy-h*0.38,x+lean*0.7,gy-h*0.72,x+lean,gy-h);ctx.stroke();
+  var tx=x+lean,ty=gy-h;
+  var fr=[[-0.5,-0.28],[0.5,-0.24],[0,-0.52],[-0.34,-0.52],[0.34,-0.48],[-0.62,-0.14],[0.62,-0.11]];
+  ctx.lineWidth=Math.max(1.5,h*0.019);
+  for(var fi=0;fi<fr.length;fi++){ctx.beginPath();ctx.moveTo(tx,ty);ctx.quadraticCurveTo(tx+fr[fi][0]*h*0.28,ty+fr[fi][1]*h*0.32,tx+fr[fi][0]*h*0.50,ty+fr[fi][1]*h*0.48+h*0.09);ctx.stroke();}
   ctx.restore();
 }
 
-function drawRoad(hy) {
-  var segs = [];
-  var curveX = 0;
-  for (var n = 0; n < NUM_DRAW_SEGS; n++) {
-    var frac = n / NUM_DRAW_SEGS;
-    var proj = project(frac);
-    var segIdx = Math.floor(scrollPos + n * 0.5) % ROAD_SEGS_TOTAL;
-    var seg = roadSegs[segIdx < 0 ? segIdx + ROAD_SEGS_TOTAL : segIdx];
-    curveX += seg.curve * (1 - frac) * speed * 0.4;
-    var cx = W / 2 + curveX;
-    segs.push({ seg: seg, y: proj.y, left: cx - proj.roadHalfW, right: cx + proj.roadHalfW });
+// ─── ROAD ────────────────────────────────────────────────────────────────────
+// Draws using pre-built _segs from buildSegs()
+function drawRoad(){
+  // Draw far→near
+  for(var i=0;i<_segs.length-1;i++){
+    var c=_segs[i],nx=_segs[i+1]; // c is farther, nx is closer
+    drawRoadSeg(nx,c); // draw quad from c to nx
   }
-  for (var i = segs.length - 1; i >= 0; i--) {
-    var cur  = segs[i];
-    var prev = segs[i-1] || { y: hy, left: W/2, right: W/2 };
-    drawRoadSeg(cur, prev);
-  }
-  // Center glow reflection
-  var last = segs[segs.length-1];
-  var rg = ctx.createLinearGradient(0, hy, 0, H);
-  rg.addColorStop(0,   'rgba(255,0,120,0.18)');
-  rg.addColorStop(0.5, 'rgba(255,0,120,0.07)');
-  rg.addColorStop(1,   'rgba(0,0,0,0)');
-  ctx.fillStyle = rg;
+  // Center reflection strip
+  var near=_segs[_segs.length-1];
+  var far=_segs[0];
+  var rg=ctx.createLinearGradient(0,far.y,0,near.y);
+  rg.addColorStop(0,'rgba(255,0,120,0)');
+  rg.addColorStop(0.5,'rgba(255,0,120,0.14)');
+  rg.addColorStop(1,'rgba(255,0,120,0)');
+  ctx.fillStyle=rg;
   ctx.beginPath();
-  ctx.moveTo(W/2, hy);
-  ctx.lineTo(last.left  + (last.right - last.left) * 0.35, H);
-  ctx.lineTo(last.left  + (last.right - last.left) * 0.65, H);
-  ctx.closePath();
-  ctx.fill();
+  ctx.moveTo(far.cx,far.y);
+  ctx.lineTo(near.l+(near.r-near.l)*0.36,near.y);
+  ctx.lineTo(near.l+(near.r-near.l)*0.64,near.y);
+  ctx.closePath();ctx.fill();
 }
-
-function drawRoadSeg(cur, prev) {
-  var alt = cur.seg.alt;
-  // Shoulder
-  ctx.fillStyle = alt ? '#100018' : '#0c0014';
-  ctx.beginPath();
-  ctx.moveTo(0, prev.y); ctx.lineTo(prev.left - W*0.25, prev.y);
-  ctx.lineTo(cur.left - W*0.25, cur.y); ctx.lineTo(0, cur.y);
-  ctx.closePath(); ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(W, prev.y); ctx.lineTo(prev.right + W*0.25, prev.y);
-  ctx.lineTo(cur.right + W*0.25, cur.y); ctx.lineTo(W, cur.y);
-  ctx.closePath(); ctx.fill();
+function drawRoadSeg(near,far){
+  var alt=near.seg.alt;
+  // Shoulder (no shadowBlur — performance)
+  ctx.fillStyle=alt?'#0d0016':'#09000f';
+  ctx.beginPath();ctx.moveTo(0,far.y);ctx.lineTo(far.l-W*0.18,far.y);ctx.lineTo(near.l-W*0.18,near.y);ctx.lineTo(0,near.y);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.moveTo(W,far.y);ctx.lineTo(far.r+W*0.18,far.y);ctx.lineTo(near.r+W*0.18,near.y);ctx.lineTo(W,near.y);ctx.closePath();ctx.fill();
   // Road
-  ctx.fillStyle = alt ? '#0e0e22' : '#0a0a1c';
-  ctx.beginPath();
-  ctx.moveTo(prev.left, prev.y); ctx.lineTo(prev.right, prev.y);
-  ctx.lineTo(cur.right, cur.y);  ctx.lineTo(cur.left,  cur.y);
-  ctx.closePath(); ctx.fill();
+  ctx.fillStyle=alt?'#0c0c20':'#080818';
+  ctx.beginPath();ctx.moveTo(far.l,far.y);ctx.lineTo(far.r,far.y);ctx.lineTo(near.r,near.y);ctx.lineTo(near.l,near.y);ctx.closePath();ctx.fill();
   // Rumble strips
-  var sw = (cur.right - cur.left) * 0.06;
-  ctx.fillStyle = alt ? '#cc0066' : '#4400aa';
-  ctx.beginPath();
-  ctx.moveTo(prev.left, prev.y); ctx.lineTo(prev.left+sw, prev.y);
-  ctx.lineTo(cur.left+sw, cur.y); ctx.lineTo(cur.left, cur.y);
-  ctx.closePath(); ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(prev.right-sw, prev.y); ctx.lineTo(prev.right, prev.y);
-  ctx.lineTo(cur.right, cur.y); ctx.lineTo(cur.right-sw, cur.y);
-  ctx.closePath(); ctx.fill();
-  // Edge lines
-  var ew = Math.max(0.5, (cur.y - prev.y) * 0.1);
-  ctx.strokeStyle = 'rgba(255,0,140,0.9)';
-  ctx.lineWidth   = ew;
-  ctx.shadowColor = '#ff0090'; ctx.shadowBlur = 5;
-  ctx.beginPath(); ctx.moveTo(prev.left,  prev.y); ctx.lineTo(cur.left,  cur.y); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(prev.right, prev.y); ctx.lineTo(cur.right, cur.y); ctx.stroke();
-  ctx.shadowBlur = 0;
-  // Center dash
-  if (alt) {
-    ctx.strokeStyle = 'rgba(200,240,255,0.85)';
-    ctx.lineWidth   = Math.max(0.5, ew * 0.5);
-    ctx.beginPath();
-    ctx.moveTo((prev.left+prev.right)/2, prev.y);
-    ctx.lineTo((cur.left+cur.right)/2,   cur.y);
-    ctx.stroke();
+  var sw=(near.r-near.l)*0.055,fsw=(far.r-far.l)*0.055;
+  ctx.fillStyle=alt?'#cc0066':'#440099';
+  ctx.beginPath();ctx.moveTo(far.l,far.y);ctx.lineTo(far.l+fsw,far.y);ctx.lineTo(near.l+sw,near.y);ctx.lineTo(near.l,near.y);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.moveTo(far.r-fsw,far.y);ctx.lineTo(far.r,far.y);ctx.lineTo(near.r,near.y);ctx.lineTo(near.r-sw,near.y);ctx.closePath();ctx.fill();
+  // Edge lines (no shadowBlur)
+  ctx.strokeStyle='rgba(255,0,153,0.85)';ctx.lineWidth=Math.max(0.5,(near.y-far.y)*0.08);
+  ctx.beginPath();ctx.moveTo(far.l,far.y);ctx.lineTo(near.l,near.y);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(far.r,far.y);ctx.lineTo(near.r,near.y);ctx.stroke();
+  // Centre dashes
+  if(alt){
+    ctx.strokeStyle='rgba(190,235,255,0.75)';ctx.lineWidth=Math.max(0.4,(near.y-far.y)*0.04);
+    ctx.beginPath();ctx.moveTo((far.l+far.r)/2,far.y);ctx.lineTo((near.l+near.r)/2,near.y);ctx.stroke();
   }
   // Lane dividers
-  if (alt) {
-    for (var l = 1; l < LANES; l++) {
-      var t = l / LANES;
-      ctx.strokeStyle = 'rgba(0,200,255,0.12)';
-      ctx.lineWidth   = Math.max(0.3, ew * 0.3);
-      ctx.beginPath();
-      ctx.moveTo(prev.left + (prev.right-prev.left)*t, prev.y);
-      ctx.lineTo(cur.left  + (cur.right-cur.left)*t,   cur.y);
-      ctx.stroke();
+  if(alt){
+    for(var l=1;l<LANES;l++){
+      var t=l/LANES;
+      ctx.strokeStyle='rgba(0,180,255,0.09)';ctx.lineWidth=Math.max(0.3,(near.y-far.y)*0.026);
+      ctx.beginPath();ctx.moveTo(far.l+(far.r-far.l)*t,far.y);ctx.lineTo(near.l+(near.r-near.l)*t,near.y);ctx.stroke();
     }
   }
 }
 
-function shadeColor(hex, pct) {
-  var n = parseInt(hex.slice(1), 16);
-  var r = Math.max(0, Math.min(255, (n >> 16) + pct));
-  var g = Math.max(0, Math.min(255, ((n >> 8) & 0xff) + pct));
-  var b = Math.max(0, Math.min(255, (n & 0xff) + pct));
-  return 'rgb(' + r + ',' + g + ',' + b + ')';
-}
+// ─── OBSTACLES ───────────────────────────────────────────────────────────────
+// Key fix: obstacle screen position is taken DIRECTLY from _segs[segN]
+// so they are ALWAYS on the road surface, no separate projection
+function drawObstacles(){
+  for(var i=0;i<obs.length;i++){
+    var o=obs[i];
+    var sn=Math.min(Math.floor(o.segN),_segs.length-1);
+    if(sn<0)continue;
+    var seg=_segs[sn];
+    var roadW=seg.r-seg.l;
+    var laneW=roadW/LANES;
+    var lt=(o.lane+0.5)/LANES;
+    var ox=seg.l+lt*roadW;
+    var oy=seg.y;
+    // Size based on segment scale (near=big, far=small)
+    var sc=seg.sc||1;
+    var cw=Math.max(6,Math.min(laneW*0.76,sc*W*BASE_HW*0.55));
+    var ch=cw*0.50;
 
-function drawObstacles(hy) {
-  for (var i = 0; i < obstacles.length; i++) {
-    var o = obstacles[i];
-    if (o.depth < 0.04 || o.depth > 1.05) continue;
-    var proj  = project(o.depth);
-    var laneT = (o.lane + 0.5) / LANES;
-    var ox    = W/2 - proj.roadHalfW + laneT * proj.roadHalfW * 2;
-    var sc    = 0.5 + o.depth * 3.5;
-    var ow    = Math.min(proj.roadHalfW * 0.58, 55 * sc * (W/800));
-    var oh    = ow * 0.50;
-    ctx.save();
-    ctx.globalAlpha = o.hit ? 0.12 : 1;
-    // Shadow glow
-    ctx.shadowColor = o.col; ctx.shadowBlur = ow * 0.4;
-    ctx.fillStyle   = o.col + '44';
-    ctx.beginPath();
-    ctx.ellipse(ox, proj.y + oh*0.1, ow*0.5, oh*0.15, 0, 0, Math.PI*2);
-    ctx.fill();
-    ctx.shadowBlur = 0;
-    // Body
-    ctx.fillStyle = o.col;
-    rrect(ox - ow/2, proj.y - oh, ow, oh, Math.max(2, oh*0.1));
-    ctx.fill();
-    // Roof
-    ctx.fillStyle = shadeColor(o.col, -40);
-    rrect(ox - ow*0.28, proj.y - oh*1.42, ow*0.56, oh*0.45, Math.max(1, oh*0.07));
-    ctx.fill();
-    // Windshield
-    ctx.fillStyle = 'rgba(80,220,255,0.4)';
-    rrect(ox - ow*0.24, proj.y - oh*1.34, ow*0.48, oh*0.30, 2);
-    ctx.fill();
-    // Brake lights
-    ctx.shadowColor = '#ff0066'; ctx.shadowBlur = ow * 0.3;
-    ctx.fillStyle = '#ff0066';
-    ctx.fillRect(ox - ow/2 + 2,          proj.y - oh*0.22, ow*0.16, oh*0.10);
-    ctx.fillRect(ox + ow/2 - ow*0.18,    proj.y - oh*0.22, ow*0.16, oh*0.10);
-    ctx.shadowBlur = 0;
+    ctx.save();ctx.globalAlpha=o.hit?0.12:1;
+    drawCarSprite(ox,oy,cw,ch,o.color);
     ctx.restore();
   }
 }
 
-function drawCar(hy) {
-  var baseY = H * 0.80;
-  var cw    = Math.min(W * 0.14, 110);
-  var ch    = cw * 0.46;
-  var rhw   = project(0.82).roadHalfW;
-  var slot  = (rhw * 2) / LANES;
-  var baseX = W/2 + car.laneX * slot * 0.5;
-
-  if (car.crashFlash > 0 && Math.floor(car.crashFlash / 5) % 3 === 1) return;
-
-  ctx.save();
-  var bc  = gameMode === 'rush' ? '#ff1a6e' : '#00c8c0';
-  var bc2 = gameMode === 'rush' ? '#cc0050' : '#009090';
-
-  // Wet road reflection
-  var refG = ctx.createLinearGradient(baseX, baseY, baseX, baseY + ch*2);
-  refG.addColorStop(0, bc + '30');
-  refG.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = refG;
-  ctx.beginPath();
-  ctx.ellipse(baseX, baseY + ch*0.2, cw*1.2, ch*1.5, 0, 0, Math.PI*2);
-  ctx.fill();
-
-  // Body
-  ctx.fillStyle = bc;
-  rrect(baseX - cw/2, baseY - ch, cw, ch, ch*0.09);
-  ctx.fill();
-
+function drawCarSprite(ox,oy,cw,ch,col){
+  // Body gradient (no shadowBlur)
+  var bg=ctx.createLinearGradient(ox,oy-ch*1.08,ox,oy);
+  bg.addColorStop(0,shade(col,+22));bg.addColorStop(0.4,col);bg.addColorStop(1,shade(col,-36));
+  ctx.fillStyle=bg;rr(ox-cw/2,oy-ch,cw,ch,Math.max(2,ch*0.08));ctx.fill();
   // Roof
-  ctx.fillStyle = bc2;
-  rrect(baseX - cw*0.3, baseY - ch*1.42, cw*0.6, ch*0.46, ch*0.07);
-  ctx.fill();
+  var rW=cw*0.60,rH=ch*0.45,rY=oy-ch-rH*0.83;
+  ctx.fillStyle=shade(col,-48);
+  ctx.beginPath();ctx.moveTo(ox-rW*0.50,rY+rH);ctx.lineTo(ox-rW*0.35,rY);ctx.lineTo(ox+rW*0.35,rY);ctx.lineTo(ox+rW*0.50,rY+rH);ctx.closePath();ctx.fill();
+  // Rear window
+  ctx.fillStyle='rgba(50,185,255,0.24)';
+  ctx.beginPath();ctx.moveTo(ox-rW*0.41,rY+rH*0.93);ctx.lineTo(ox-rW*0.27,rY+rH*0.10);ctx.lineTo(ox+rW*0.27,rY+rH*0.10);ctx.lineTo(ox+rW*0.41,rY+rH*0.93);ctx.closePath();ctx.fill();
+  // Side windows
+  ctx.fillStyle='rgba(30,165,255,0.17)';
+  ctx.beginPath();ctx.moveTo(ox-cw*0.46,oy-ch*0.68);ctx.lineTo(ox-rW*0.47,rY+rH*0.93);ctx.lineTo(ox-rW*0.29,rY+rH*0.10);ctx.lineTo(ox-cw*0.26,oy-ch*0.72);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.moveTo(ox+cw*0.46,oy-ch*0.68);ctx.lineTo(ox+rW*0.47,rY+rH*0.93);ctx.lineTo(ox+rW*0.29,rY+rH*0.10);ctx.lineTo(ox+cw*0.26,oy-ch*0.72);ctx.closePath();ctx.fill();
+  // Trunk
+  ctx.fillStyle=shade(col,-22);rr(ox-cw*0.45,oy-ch*0.25,cw*0.90,ch*0.25,Math.max(1,ch*0.05));ctx.fill();
+  // Brake lights (flat, no blur)
+  ctx.fillStyle='#ff0044';
+  ctx.fillRect(ox-cw/2+2,oy-ch*0.22,cw*0.17,ch*0.09);
+  ctx.fillRect(ox+cw/2-cw*0.19,oy-ch*0.22,cw*0.17,ch*0.09);
+  // Bumper
+  ctx.fillStyle=shade(col,-52);ctx.fillRect(ox-cw*0.43,oy-ch*0.08,cw*0.86,ch*0.08);
+  // Wheel arches
+  ctx.fillStyle='rgba(0,0,0,0.45)';
+  var wr=cw*0.14;
+  ctx.beginPath();ctx.ellipse(ox-cw*0.28,oy-ch*0.06,wr,wr*0.35,0,Math.PI,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(ox+cw*0.28,oy-ch*0.06,wr,wr*0.35,0,Math.PI,Math.PI*2);ctx.fill();
+}
 
-  // Windshield
-  ctx.fillStyle = 'rgba(100,230,255,0.48)';
-  rrect(baseX - cw*0.26, baseY - ch*1.34, cw*0.52, ch*0.32, 3);
-  ctx.fill();
-
-  // Headlights
-  ctx.shadowColor = 'rgba(200,240,255,0.9)'; ctx.shadowBlur = cw*0.15;
-  ctx.fillStyle   = 'rgba(220,240,255,0.95)';
-  ctx.fillRect(baseX - cw/2 + 3,        baseY - ch*0.22, cw*0.18, ch*0.10);
-  ctx.fillRect(baseX + cw/2 - cw*0.20,  baseY - ch*0.22, cw*0.18, ch*0.10);
-  ctx.shadowBlur = 0;
-
-  // Neon underglow
+function drawParticles(){
   ctx.save();
-  ctx.shadowColor = bc; ctx.shadowBlur = 20;
-  ctx.strokeStyle = bc; ctx.lineWidth   = 2.5;
-  ctx.globalAlpha = 0.85;
-  ctx.beginPath();
-  ctx.moveTo(baseX - cw/2 + 6, baseY + 1);
-  ctx.lineTo(baseX + cw/2 - 6, baseY + 1);
-  ctx.stroke();
-  ctx.restore();
-
+  for(var i=0;i<parts.length;i++){var p=parts[i];ctx.globalAlpha=p.life;ctx.fillStyle=p.col;ctx.beginPath();ctx.arc(p.x,p.y,p.r*p.life,0,Math.PI*2);ctx.fill();}
   ctx.restore();
 }
 
-function drawParticles() {
-  for (var i = 0; i < particles.length; i++) {
-    var p = particles[i];
-    ctx.save();
-    ctx.globalAlpha = p.life;
-    ctx.fillStyle   = p.col;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI*2);
-    ctx.fill();
-    ctx.restore();
+// ─── RAIN ────────────────────────────────────────────────────────────────────
+function drawRain(hy){
+  ctx.save();ctx.globalAlpha=rainIntensity*0.55;ctx.strokeStyle='rgba(160,200,255,0.6)';ctx.lineWidth=1;
+  for(var i=0;i<rainDrops.length;i++){
+    var d=rainDrops[i];
+    d.y+=d.spd*speed*1.2;
+    if(d.y>DASH_FRAC)d.y=0;
+    var sx=d.x*W,sy=d.y*H,ex=sx-d.len*W*0.04,ey=sy+d.len*H;
+    if(ey>H*DASH_FRAC)continue;
+    ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(ex,ey);ctx.stroke();
   }
+  ctx.restore();
+  // Windshield wet sheen
+  var wg=ctx.createLinearGradient(0,H*(HY-0.05),0,H*DASH_FRAC);
+  wg.addColorStop(0,'rgba(100,150,255,0)');
+  wg.addColorStop(1,'rgba(100,150,255,'+rainIntensity*0.06+')');
+  ctx.fillStyle=wg;ctx.fillRect(0,H*(HY-0.05),W,H*(DASH_FRAC-HY+0.05));
 }
 
-// Menu idle animation
-var menuAnimId = null;
-function menuIdle() {
-  if (inGame) return;
-  ctx.clearRect(0, 0, W, H);
-  drawSky(H * 0.44);
-  drawStars(H * 0.44);
-  menuAnimId = requestAnimationFrame(menuIdle);
+// ════════════════════════════════════════════════════════════════════════════
+//  COCKPIT
+//  Layout (portrait mobile-first, scales to desktop):
+//
+//  ┌─────────────────────────────────────────────────────────────┐
+//  │  [rear-view mirror]          wipers                        │  ← windshield
+//  ├──────────────────────────── dashY ─────────────────────────┤
+//  │ [GAUGE CLUSTER]   [CENTER CONSOLE]   [RADIO UNIT]         │
+//  │                                                             │
+//  │              [STEERING WHEEL — top 65% visible]            │
+//  └─────────────────────────────────────────────────────────────┘
+//
+//  Gauge cluster: left 28% of width
+//  Center console: middle 26%  (no overlap with wheel)
+//  Radio: right 28%
+//  Steering wheel: centered, raised so hub+airbag always visible
+// ════════════════════════════════════════════════════════════════════════════
+function drawCockpit(){
+  ctx.save();
+  var dashY=H*DASH_FRAC;
+  var dashH=H-dashY;
+
+  // ── REAR-VIEW MIRROR ─────────────────────────────────────────────────────
+  var mw=W*0.13,mh=H*0.042;
+  var mx=(W-mw)/2,my=H*0.018;
+  ctx.fillStyle='#08010e';
+  ctx.beginPath();ctx.moveTo(mx-mw*0.04,my);ctx.lineTo(mx+mw+mw*0.04,my);ctx.lineTo(mx+mw,my+mh);ctx.lineTo(mx,my+mh);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='rgba(130,50,230,0.45)';ctx.lineWidth=1;ctx.stroke();
+  var mrg=ctx.createLinearGradient(mx,my,mx,my+mh);
+  mrg.addColorStop(0,'rgba(35,10,65,0.88)');mrg.addColorStop(1,'rgba(8,3,20,0.95)');
+  ctx.fillStyle=mrg;rr(mx+2,my+2,mw-4,mh-4,2);ctx.fill();
+  // Road tint in mirror
+  var mroad=ctx.createLinearGradient(mx,my+mh*0.3,mx,my+mh);
+  mroad.addColorStop(0,'rgba(100,0,80,0.10)');mroad.addColorStop(1,'rgba(30,0,50,0.25)');
+  ctx.fillStyle=mroad;rr(mx+2,my+mh*0.3,mw-4,mh*0.7-2,2);ctx.fill();
+  // Mirror mount
+  ctx.fillStyle='#0c0220';ctx.fillRect(W/2-2,my+mh,4,H*0.015);
+
+  // ── A-PILLARS ────────────────────────────────────────────────────────────
+  ctx.fillStyle='#05010b';
+  ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(W*0.080,0);ctx.lineTo(W*0.038,dashY);ctx.lineTo(0,dashY);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.moveTo(W,0);ctx.lineTo(W*0.920,0);ctx.lineTo(W*0.962,dashY);ctx.lineTo(W,dashY);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='rgba(110,38,200,0.26)';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(W*0.080,0);ctx.lineTo(W*0.038,dashY);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(W*0.920,0);ctx.lineTo(W*0.962,dashY);ctx.stroke();
+
+  // ── WIPERS (always visible, animated only when raining) ──────────────────
+  var wiperAlpha=rainIntensity>0.05?0.65:0.18;
+  var wiperSweep=rainIntensity>0.05?Math.sin(rTime*0.022)*0.42-0.10:0.05;
+  var wLen=W*0.20,pivY=dashY-H*0.006;
+  ctx.save();ctx.globalAlpha=wiperAlpha;
+  ctx.strokeStyle='rgba(90,50,140,1)';ctx.lineWidth=Math.max(1.5,W*0.004);ctx.lineCap='round';
+  var lPivX=W*0.30,rPivX=W*0.70;
+  ctx.beginPath();ctx.moveTo(lPivX,pivY);ctx.lineTo(lPivX+Math.cos(Math.PI*0.68+wiperSweep)*wLen,pivY-Math.sin(Math.PI*0.68+wiperSweep)*wLen*0.5);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(rPivX,pivY);ctx.lineTo(rPivX-Math.cos(Math.PI*0.68+wiperSweep)*wLen,pivY-Math.sin(Math.PI*0.68+wiperSweep)*wLen*0.5);ctx.stroke();
+  ctx.restore();
+
+  // ── DASHBOARD BODY ───────────────────────────────────────────────────────
+  var dg=ctx.createLinearGradient(0,dashY,0,H);
+  dg.addColorStop(0,'#1b0730');dg.addColorStop(0.12,'#110322');dg.addColorStop(0.55,'#0b0318');dg.addColorStop(1,'#03000e');
+  ctx.fillStyle=dg;
+  ctx.beginPath();ctx.moveTo(0,dashY);ctx.bezierCurveTo(W*0.25,dashY+dashH*0.050,W*0.75,dashY+dashH*0.050,W,dashY);ctx.lineTo(W,H);ctx.lineTo(0,H);ctx.closePath();ctx.fill();
+  // Vent lines
+  ctx.save();ctx.globalAlpha=0.18;
+  for(var vi=0;vi<4;vi++){ctx.fillStyle='rgba(0,0,0,0.7)';ctx.fillRect(W*0.04,dashY+dashH*0.05+vi*dashH*0.034,W*0.92,dashH*0.014);}
+  ctx.restore();
+
+  // ── NEON SEAM ────────────────────────────────────────────────────────────
+  ctx.strokeStyle='#ee0077';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(W*0.038,dashY);ctx.bezierCurveTo(W*0.25,dashY+dashH*0.050,W*0.75,dashY+dashH*0.050,W*0.962,dashY);ctx.stroke();
+
+  // ── LAYOUT DIMENSIONS ────────────────────────────────────────────────────
+  // Three equal panels. On narrow screens (mobile) they must not overlap the wheel.
+  // Wheel center: W*0.5, H + wheelR*0.08 → top of wheel ≈ H - wheelR*0.92
+  // Panels must fit above the wheel's top arc.
+  var panelW=W*0.27, panelH=dashH*0.68;
+  var panelY=dashY+dashH*0.06;
+  var lx=W*0.018;                    // left panel X
+  var rx=W-W*0.018-panelW;           // right panel X
+
+  drawGaugeCluster(lx,panelY,panelW,panelH);
+  drawRadioUnit(rx,panelY,panelW,panelH);
+
+  // Center console — sits above wheel, narrower
+  var podW=W*0.22,podH=dashH*0.50;
+  var podX=(W-podW)/2,podY=dashY+dashH*0.08;
+  drawCenterPod(podX,podY,podW,podH);
+
+  // ── STEERING WHEEL ───────────────────────────────────────────────────────
+  // On mobile W≈375*DPR. Wheel radius = min(W*0.36,H*0.28).
+  // Center at H + wr*0.06 → top of wheel visible arc at H - wr*0.94.
+  // We want top ~15% above H, showing hub fully.
+  var wr=Math.min(W*0.36,H*0.26);
+  drawWheel(W*0.5,H+wr*0.05,wr);
+
+  ctx.restore();
 }
-menuIdle();
 
-document.getElementById('btn-cruise').addEventListener('click', function() {
-  document.getElementById('menu-screen').style.display = 'none';
-  if (menuAnimId) cancelAnimationFrame(menuAnimId);
-  startGame('cruise');
-});
-document.getElementById('btn-rush').addEventListener('click', function() {
-  document.getElementById('menu-screen').style.display = 'none';
-  if (menuAnimId) cancelAnimationFrame(menuAnimId);
-  startGame('rush');
-});
+// ─── GAUGE CLUSTER ───────────────────────────────────────────────────────────
+function drawGaugeCluster(x,y,w,h){
+  // Panel
+  ctx.fillStyle='#000';rr(x-3,y-3,w+6,h+6,7);ctx.fill();
+  var pg=ctx.createLinearGradient(x,y,x,y+h);pg.addColorStop(0,'#080115');pg.addColorStop(1,'#020008');
+  ctx.fillStyle=pg;rr(x,y,w,h,5);ctx.fill();
+  // CRT lines (no shadow)
+  ctx.save();ctx.globalAlpha=0.035;ctx.fillStyle='#00ffcc';
+  for(var si=0;si<h;si+=3)ctx.fillRect(x,y+si,w,1.4);
+  ctx.restore();
+  ctx.strokeStyle='rgba(0,170,255,0.40)';ctx.lineWidth=1.1;rr(x,y,w,h,5);ctx.stroke();
 
-})(); // END GAME
+  // Two gauges side by side — upper 54% of panel height
+  var gaugeH=h*0.50;
+  var gR=Math.min(w*0.21,gaugeH*0.44);
+  var gY=y+gR+gaugeH*0.06;
+  // Speed (left)
+  drawGauge(x+w*0.27,gY,gR,Math.round(speed*60),0,220,'#00ccff','#0044ff','SPD','KMH');
+  // RPM (right)
+  drawGauge(x+w*0.73,gY,gR,Math.min(7999,Math.round(speed*1550+350)),0,8000,'#ff7700','#ff1100','RPM','x100');
 
+  // Odometer
+  var odoY=y+gaugeH+h*0.025;
+  var odoH=h*0.105;
+  drawOdometer(x+w/2,odoY,w*0.90,odoH);
 
-// ============================================================
-//  RADIO PUMPO - inline player (button-only, no auto-play)
-// ============================================================
-(function RADIO() {
-  var MANIFEST_URL = '/radio-manifest.json';
-  var manifest = null, audio = null, playing = false;
-  var sequence = null, syncTick = null, fbIdx = 0;
+  // Fuel arc (left) + Temp arc (right) — lower row
+  var arcR=Math.min(w*0.17,h*0.13);
+  var arcY=odoY+odoH+h*0.04+arcR;
+  drawArcGauge(x+w*0.26,arcY,arcR,Math.max(0.05,1-dist*0.004),['#00ff88','#ff8800','#ff2200'],'C','F','FUEL','\u26FD');
+  drawArcGauge(x+w*0.74,arcY,arcR,Math.min(0.92,0.38+speed*0.058),['#00aaff','#ff8800','#ff2200'],'C','H','TEMP','\u2600');
 
-  var FALLBACK = [
-    { file: 'https://radiopumpo.github.io/songs/pumpofantastique.mp3',    title: 'Pumpo est Fantastique' },
-    { file: 'https://radiopumpo.github.io/songs/pumpoelectrolatino.mp3',  title: 'Tirate un Pumpo' },
-    { file: 'https://radiopumpo.github.io/songs/pumpophonkbr.mp3',        title: 'A ora do Pumpo' },
-    { file: 'https://radiopumpo.github.io/songs/housepumpo.mp3',          title: 'House Pumpo' },
-    { file: 'https://radiopumpo.github.io/songs/dnbpumpo.mp3',            title: 'DNB Pumpo' },
-    { file: 'https://radiopumpo.github.io/songs/pumpophonkbr2.mp3',       title: 'A ora do Pumpo Dois' },
-    { file: 'https://radiopumpo.github.io/songs/pumponostalgiaphonk.mp3', title: 'Pumpo Nostalgia Phonk' }
+  // Indicator row
+  drawIndicators(x+w*0.04,y+h-h*0.095,w*0.92,h*0.075);
+}
+
+function drawGauge(cx,cy,r,val,mn,mx,c1,c2,label,unit){
+  ctx.save();
+  // Face
+  var fg=ctx.createRadialGradient(cx,cy,0,cx,cy,r);fg.addColorStop(0,'#0d0022');fg.addColorStop(1,'#040010');
+  ctx.fillStyle=fg;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();
+  // Bezel
+  ctx.strokeStyle='rgba(255,255,255,0.06)';ctx.lineWidth=r*0.09;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.stroke();
+  var sA=Math.PI*0.76,eA=Math.PI*2.24,pct=Math.max(0,Math.min(1,(val-mn)/(mx-mn)));
+  // Track
+  ctx.strokeStyle='rgba(255,255,255,0.05)';ctx.lineWidth=r*0.09;ctx.lineCap='butt';ctx.beginPath();ctx.arc(cx,cy,r*0.76,sA,eA);ctx.stroke();
+  // Fill
+  var ag=ctx.createLinearGradient(cx-r,cy,cx+r,cy);ag.addColorStop(0,c1);ag.addColorStop(1,c2);
+  ctx.strokeStyle=ag;ctx.lineWidth=r*0.09;ctx.beginPath();ctx.arc(cx,cy,r*0.76,sA,sA+pct*(eA-sA));ctx.stroke();
+  // Ticks
+  for(var ti=0;ti<=10;ti++){var ta=sA+ti*(eA-sA)/10,maj=ti%2===0;ctx.strokeStyle=maj?'rgba(255,255,255,0.45)':'rgba(255,255,255,0.18)';ctx.lineWidth=maj?r*0.026:r*0.014;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(cx+Math.cos(ta)*r*(maj?0.60:0.66),cy+Math.sin(ta)*r*(maj?0.60:0.66));ctx.lineTo(cx+Math.cos(ta)*r*0.80,cy+Math.sin(ta)*r*0.80);ctx.stroke();}
+  // Needle
+  var na=sA+pct*(eA-sA);
+  ctx.save();ctx.translate(cx,cy);ctx.rotate(na);
+  ctx.fillStyle=c1;ctx.beginPath();ctx.moveTo(-r*0.020,r*0.11);ctx.lineTo(-r*0.009,-r*0.68);ctx.lineTo(r*0.009,-r*0.68);ctx.lineTo(r*0.020,r*0.11);ctx.closePath();ctx.fill();
+  ctx.restore();
+  // Hub
+  var hg=ctx.createRadialGradient(cx,cy,0,cx,cy,r*0.09);hg.addColorStop(0,'#fff');hg.addColorStop(0.4,c1);hg.addColorStop(1,'#000');
+  ctx.fillStyle=hg;ctx.beginPath();ctx.arc(cx,cy,r*0.085,0,Math.PI*2);ctx.fill();
+  // Text
+  ctx.textAlign='center';
+  ctx.fillStyle='rgba(255,255,255,0.35)';ctx.font='bold '+Math.round(r*0.19)+'px "Share Tech Mono",monospace';ctx.fillText(label,cx,cy+r*0.28);
+  ctx.fillStyle=c1;ctx.font='bold '+Math.round(r*0.30)+'px "Share Tech Mono",monospace';
+  var d=(val<10?'00':val<100?'0':'')+val;ctx.fillText(d,cx,cy+r*0.54);
+  ctx.fillStyle='rgba(255,255,255,0.22)';ctx.font=Math.round(r*0.15)+'px "Share Tech Mono",monospace';ctx.fillText(unit,cx,cy+r*0.68);
+  ctx.restore();
+}
+
+function drawArcGauge(cx,cy,r,pct,cols,lLow,lHi,label,icon){
+  var sA=Math.PI*0.82,eA=Math.PI*2.18;
+  ctx.save();
+  ctx.fillStyle='#060014';ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,0.05)';ctx.lineWidth=r*0.09;ctx.lineCap='butt';ctx.beginPath();ctx.arc(cx,cy,r*0.76,sA,eA);ctx.stroke();
+  var col=pct>0.5?cols[0]:pct>0.25?cols[1]:cols[2];
+  ctx.strokeStyle=col;ctx.lineWidth=r*0.09;ctx.lineCap='round';ctx.beginPath();ctx.arc(cx,cy,r*0.76,sA,sA+pct*(eA-sA));ctx.stroke();
+  ctx.fillStyle='rgba(255,255,255,0.30)';ctx.font='bold '+Math.round(r*0.26)+'px "Share Tech Mono",monospace';ctx.textAlign='center';
+  ctx.fillText(lLow,cx+Math.cos(sA)*r*0.52,cy+Math.sin(sA)*r*0.52+r*0.08);
+  ctx.fillText(lHi, cx+Math.cos(eA)*r*0.52,cy+Math.sin(eA)*r*0.52+r*0.08);
+  ctx.fillStyle=col;ctx.font=Math.round(r*0.36)+'px Arial';ctx.fillText(icon,cx,cy+r*0.14);
+  ctx.fillStyle=col;ctx.font='bold '+Math.round(r*0.25)+'px "Share Tech Mono",monospace';ctx.fillText(Math.round(pct*100)+'%',cx,cy+r*0.50);
+  ctx.restore();
+}
+
+function drawOdometer(cx,y,w,h){
+  var digits=('000000'+Math.floor(dist*10)).slice(-6);
+  ctx.fillStyle='#080018';rr(cx-w/2,y,w,h,3);ctx.fill();
+  ctx.strokeStyle='rgba(0,170,255,0.28)';ctx.lineWidth=0.7;rr(cx-w/2,y,w,h,3);ctx.stroke();
+  var dw=w/digits.length;
+  ctx.save();ctx.font='bold '+Math.round(h*0.64)+'px "Share Tech Mono",monospace';ctx.textAlign='center';ctx.textBaseline='middle';
+  for(var di=0;di<digits.length;di++){
+    ctx.fillStyle=di===digits.length-1?'rgba(255,190,0,0.88)':'rgba(0,210,255,0.82)';
+    ctx.fillText(digits[di],cx-w/2+di*dw+dw/2,y+h*0.54);
+    if(di<digits.length-1){ctx.fillStyle='rgba(255,255,255,0.07)';ctx.fillRect(cx-w/2+(di+1)*dw-0.5,y+h*0.08,1,h*0.82);}
+  }
+  ctx.fillStyle='rgba(0,170,255,0.38)';ctx.font=Math.round(h*0.26)+'px "Share Tech Mono",monospace';ctx.textBaseline='alphabetic';
+  ctx.fillText('ODO  KM',cx,y-h*0.18);
+  ctx.restore();
+}
+
+function drawIndicators(x,y,w,h){
+  ctx.save();
+  var blink=Math.floor(rTime*0.075)%2===0;
+  var items=[
+    {s:'◄',c:'#ff9900',on:car.laneXTgt<-0.30&&blink},
+    {s:'►',c:'#ff9900',on:car.laneXTgt>0.30&&blink},
+    {s:'!',c:'#ffcc00',on:MODE==='rush'&&speed>3.0},
+    {s:'F',c:'#ff3300',on:dist>7.5},
+    {s:'P',c:'#00aaff',on:!inGame},
+    {s:'R',c:'#ff2d78',on:window.radioIsOn||false}
   ];
+  var iw=w/items.length;
+  ctx.font='bold '+Math.round(h*0.72)+'px "Share Tech Mono",monospace';
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  for(var ii=0;ii<items.length;ii++){
+    var it=items[ii];ctx.globalAlpha=it.on?1:0.13;ctx.fillStyle=it.c;
+    ctx.fillText(it.s,x+ii*iw+iw/2,y+h*0.5);
+  }
+  ctx.textBaseline='alphabetic';ctx.restore();
+}
 
-  function utcSec()  { var n=new Date(); return n.getUTCHours()*3600+n.getUTCMinutes()*60+n.getUTCSeconds(); }
-  function utcHour() { return new Date().getUTCHours(); }
-  function daypart() {
-    var h = utcHour();
-    if (h>=6  && h<12) return 'breakfast';
-    if (h>=12 && h<19) return 'afternoons';
-    return 'latenight';
-  }
-  function dateSeed() {
-    var d=new Date();
-    return parseInt('' + d.getUTCFullYear() + pad(d.getUTCMonth()+1) + pad(d.getUTCDate()));
-  }
-  function pad(n) { return n < 10 ? '0'+n : ''+n; }
-  function seededShuffle(arr, seed) {
-    var a=arr.slice(), s=seed>>>0;
-    function rand() { s=(Math.imul(1664525,s)+1013904223)>>>0; return s/0x100000000; }
-    for (var i=a.length-1;i>0;i--) { var j=Math.floor(rand()*(i+1)); var tmp=a[i]; a[i]=a[j]; a[j]=tmp; }
-    return a;
-  }
-  function buildSeq() {
-    var dp=daypart(), seed=dateSeed();
-    var sf=manifest.scheduling.segment_frequency;
-    var sidf=manifest.scheduling.station_id_frequency;
-    var wrap=manifest.segments.show_wrappers;
-    var segs=manifest.segments[dp];
-    var sids=manifest.segments.station_ids;
-    var pool=manifest.tracks.filter(function(t){ return t.dayparts.indexOf(dp)>=0; });
-    var sh=seededShuffle(pool,seed);
-    var seq=[], total=0, ti=0, segi=0, sidi=0, tc=0;
-    var intro=wrap[dp+'_intro'];
-    seq.push({ type:'segment', file:intro.file, duration:intro.duration, title:manifest.dayparts[dp].label });
-    total+=intro.duration;
-    while (total<86400) {
-      var track=sh[ti%sh.length];
-      seq.push({ type:'track', file:track.file, duration:track.duration, title:track.title });
-      total+=track.duration; ti++; tc++;
-      if (tc%sf===0) {
-        var seg=segs[segi%segs.length];
-        seq.push({ type:'segment', file:seg.file, duration:seg.duration, title:manifest.station.host });
-        total+=seg.duration; segi++;
-      }
-      if (tc%sidf===0 && tc%sf!==0) {
-        var sid=sids[sidi%sids.length];
-        seq.push({ type:'segment', file:sid.file, duration:sid.duration, title:'Radio Pumpo' });
-        total+=sid.duration; sidi++;
-      }
-    }
-    return seq;
-  }
-  function currentPos(seq) {
-    var s=utcSec(), e=0;
-    for (var i=0;i<seq.length;i++) { if(e+seq[i].duration>s) return {item:seq[i],pos:s-e}; e+=seq[i].duration; }
-    return {item:seq[0],pos:0};
-  }
-  function showTrack(item) {
-    var m=document.getElementById('pumpo-song-marquee');
-    if (!m) return;
-    var dp=manifest ? manifest.dayparts[daypart()].label : 'Radio Pumpo';
-    var ttl=item.type==='track' ? item.title : (item.title||'Radio Pumpo');
-    m.textContent = dp.toUpperCase() + ' - ' + ttl;
-    m.classList.remove('scrolling');
-    setTimeout(function() {
-      var parent=m.parentElement;
-      if (parent && m.scrollWidth > parent.clientWidth+4) {
-        var d=-(m.scrollWidth-parent.clientWidth+10);
-        m.style.setProperty('--sd', d+'px');
-        m.classList.add('scrolling');
-      }
-    }, 50);
-  }
-  function setDot(on) {
-    var d=document.getElementById('radio-dot');
-    if (d) d.className = on ? 'live' : '';
-  }
-  function setBtn(txt, on) {
-    var b=document.getElementById('pumpo-radio-toggle');
-    if (!b) return;
-    b.textContent=txt;
-    b.className=on?'on':'';
-  }
-  function ensureAudio() {
-    if (!audio) {
-      audio=new Audio();
-      audio.preload='auto';
-      audio.addEventListener('ended', onEnded);
-    }
-  }
-  function onEnded() {
-    if (!playing) return;
-    if (sequence) playFromPos(); else playFallback();
-  }
-  function playFromPos() {
-    var cp=currentPos(sequence);
-    audio.src=cp.item.file;
-    audio.currentTime=cp.pos;
-    audio.play().then(function() {
-      setDot(true); setBtn('ON AIR', true); showTrack(cp.item);
-    }).catch(function() { setBtn('TAP TO TUNE', false); });
-  }
-  function startSync() {
-    if (syncTick) clearInterval(syncTick);
-    syncTick=setInterval(function() {
-      if (!playing||!sequence) return;
-      var cp=currentPos(sequence);
-      var cur=(audio.src||'').split('/').pop();
-      var exp=(cp.item.file||'').split('/').pop();
-      var drift=Math.abs((audio.currentTime||0)-cp.pos);
-      if (cur!==exp) playFromPos();
-      else if (drift>8) audio.currentTime=cp.pos;
-    }, 15000);
-  }
-  function playFallback() {
-    var t=FALLBACK[fbIdx%FALLBACK.length]; fbIdx++;
-    audio.src=t.file;
-    audio.play().then(function() {
-      setDot(true); setBtn('ON AIR', true);
-      var m=document.getElementById('pumpo-song-marquee');
-      if (m) m.textContent='Radio Pumpo - '+t.title;
-    }).catch(function() { setBtn('TAP TO TUNE', false); });
-  }
-  function toggle() {
-    ensureAudio();
-    if (playing) {
-      playing=false; audio.pause();
-      if (syncTick) { clearInterval(syncTick); syncTick=null; }
-      setDot(false); setBtn('TUNE IN', false);
-      var m=document.getElementById('pumpo-song-marquee');
-      if (m) { m.textContent='Radio Pumpo - Tuned out'; m.classList.remove('scrolling'); }
-      return;
-    }
-    playing=true; setBtn('...', false);
-    if (manifest) {
-      sequence=buildSeq(); playFromPos(); startSync();
-    } else {
-      fetch(MANIFEST_URL)
-        .then(function(r){ return r.ok?r.json():null; })
-        .then(function(m) {
-          if (m) { manifest=m; sequence=buildSeq(); playFromPos(); startSync(); }
-          else playFallback();
-        })
-        .catch(function(){ playFallback(); });
-    }
-  }
-  var btn=document.getElementById('pumpo-radio-toggle');
-  if (btn) btn.addEventListener('click', toggle);
+// ─── RADIO UNIT ───────────────────────────────────────────────────────────────
+function drawRadioUnit(x,y,w,h){
+  ctx.fillStyle='#000';rr(x-3,y-3,w+6,h+6,7);ctx.fill();
+  var pg=ctx.createLinearGradient(x,y,x,y+h);pg.addColorStop(0,'#0e0208');pg.addColorStop(1,'#030007');
+  ctx.fillStyle=pg;rr(x,y,w,h,5);ctx.fill();
+  ctx.save();ctx.globalAlpha=0.04;ctx.fillStyle='#ff00aa';for(var si=0;si<h;si+=3)ctx.fillRect(x,y+si,w,1.4);ctx.restore();
+  ctx.strokeStyle='rgba(255,0,140,0.38)';ctx.lineWidth=1.1;rr(x,y,w,h,5);ctx.stroke();
 
-  // Pre-cache manifest silently - no playback
-  fetch(MANIFEST_URL)
-    .then(function(r){ return r.ok?r.json():null; })
-    .then(function(m){ if(m) manifest=m; })
-    .catch(function(){});
+  var isOn=window.radioIsOn||false;
+  var pad=w*0.07;
+  var cy2=y;
+
+  // ── Status bar ──
+  var sbH=h*0.14;
+  ctx.fillStyle='rgba(255,0,70,0.10)';ctx.fillRect(x,cy2,w,sbH);
+  ctx.fillStyle=isOn?'#ff2d78':'#330010';
+  ctx.beginPath();ctx.arc(x+pad+5,cy2+sbH*0.52,4,0,Math.PI*2);ctx.fill();
+  ctx.font='bold '+Math.round(w*0.085)+'px "Share Tech Mono",monospace';
+  ctx.fillStyle=isOn?'#ff6699':'rgba(255,50,80,0.30)';ctx.textAlign='left';
+  ctx.fillText(isOn?'ON AIR':'OFFLINE',x+pad+13,cy2+sbH*0.68);
+  ctx.fillStyle='rgba(255,60,100,0.35)';ctx.textAlign='right';
+  ctx.fillText('FM',x+w-pad,cy2+sbH*0.68);
+  cy2+=sbH+h*0.02;
+
+  // ── Frequency display ──
+  var fH=h*0.18;
+  ctx.fillStyle='#000';rr(x+pad,cy2,w-pad*2,fH,3);ctx.fill();
+  ctx.strokeStyle='rgba(255,0,90,0.30)';ctx.lineWidth=0.7;rr(x+pad,cy2,w-pad*2,fH,3);ctx.stroke();
+  ctx.font='bold '+Math.round(fH*0.58)+'px "Share Tech Mono",monospace';ctx.fillStyle='#ff3388';ctx.textAlign='center';
+  ctx.fillText('98.7',x+w*0.42,cy2+fH*0.72);
+  ctx.font=Math.round(fH*0.30)+'px "Share Tech Mono",monospace';ctx.fillStyle='rgba(255,60,100,0.45)';
+  ctx.fillText('MHz',x+w*0.76,cy2+fH*0.70);
+  cy2+=fH+h*0.018;
+
+  // ── Band scale ──
+  var bsH=h*0.10;
+  var bsX=x+pad,bsW=w-pad*2;
+  ctx.fillStyle='rgba(255,0,70,0.05)';ctx.fillRect(bsX,cy2,bsW,bsH);
+  var bands=['88','92','96','100','104','108'];
+  ctx.font=Math.round(bsH*0.44)+'px "Share Tech Mono",monospace';ctx.fillStyle='rgba(255,60,100,0.38)';
+  for(var bi=0;bi<bands.length;bi++){
+    var bx=bsX+bi*(bsW/(bands.length-1));
+    ctx.fillRect(bx-0.5,cy2,1,bsH*0.52);ctx.textAlign='center';ctx.fillText(bands[bi],bx,cy2+bsH*0.95);
+  }
+  // Needle
+  var nPct=(98.7-88)/20;ctx.fillStyle='#ff2d78';ctx.fillRect(bsX+nPct*bsW-1,cy2-bsH*0.08,2,bsH*0.62);
+  cy2+=bsH+h*0.02;
+
+  // ── Track title ──
+  var ttH=h*0.14;
+  var title=window.radioTrack||'Tune in to Pumpo';
+  ctx.font=Math.round(w*0.078)+'px "Share Tech Mono",monospace';ctx.fillStyle='rgba(255,110,180,0.88)';ctx.textAlign='left';
+  var words=title.split(' '),line='',tlines=[];
+  for(var wi=0;wi<words.length;wi++){var test=line+(line?' ':'')+words[wi];if(ctx.measureText(test).width>w-pad*2&&line){tlines.push(line);line=words[wi];}else line=test;}
+  tlines.push(line);
+  var tly=cy2+ttH*0.38;
+  for(var li=0;li<Math.min(tlines.length,2);li++){ctx.fillText(tlines[li],x+pad,tly);tly+=ttH*0.54;}
+  cy2+=ttH+h*0.01;
+
+  // ── Waveform ──
+  var wH=h*0.14;
+  var barN=12,bw=(w-pad*2)/barN;
+  for(var b=0;b<barN;b++){
+    var bh=isOn?wH*(0.10+Math.abs(Math.sin(rTime*0.18+b*0.60))*0.90):wH*0.06;
+    var wg=ctx.createLinearGradient(0,cy2+wH-bh,0,cy2+wH);wg.addColorStop(0,'#ff2d78');wg.addColorStop(1,'#660020');
+    ctx.fillStyle=wg;ctx.fillRect(x+pad+b*bw,cy2+wH-bh,bw-1.5,bh);
+  }
+  cy2+=wH+h*0.025;
+
+  // ── TUNE button ──
+  var btnH=h*0.13,btnW=w-pad*2;
+  ctx.fillStyle=isOn?'rgba(70,0,25,0.9)':'rgba(20,0,8,0.9)';rr(x+pad,cy2+2,btnW,btnH,4);ctx.fill();
+  ctx.fillStyle=isOn?'#5a001e':'#1a0008';rr(x+pad,cy2,btnW,btnH,4);ctx.fill();
+  ctx.strokeStyle=isOn?'rgba(255,0,80,0.70)':'rgba(255,0,80,0.15)';ctx.lineWidth=1;rr(x+pad,cy2,btnW,btnH,4);ctx.stroke();
+  ctx.font='bold '+Math.round(w*0.085)+'px "Share Tech Mono",monospace';ctx.textAlign='center';
+  ctx.fillStyle=isOn?'#fff':'rgba(255,60,90,0.42)';ctx.fillText(isOn?'[ ON AIR ]':'[ TUNE IN ]',x+w/2,cy2+btnH*0.67);
+  window._rBtn={x:x+pad,y:cy2,w:btnW,h:btnH};
+}
+
+// ─── CENTER POD ───────────────────────────────────────────────────────────────
+function drawCenterPod(x,y,w,h){
+  var flare=w*0.08;
+  var pg=ctx.createLinearGradient(x,y,x,y+h);pg.addColorStop(0,'#220a38');pg.addColorStop(1,'#080114');
+  ctx.fillStyle=pg;
+  ctx.beginPath();ctx.moveTo(x-flare,y+h);ctx.lineTo(x,y);ctx.lineTo(x+w,y);ctx.lineTo(x+w+flare,y+h);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='rgba(110,32,210,0.35)';ctx.lineWidth=1.1;ctx.stroke();
+  ctx.fillStyle='#060110';rr(x+7,y+6,w-14,h-12,4);ctx.fill();
+  var mc=MODE==='rush'?'#ff2d78':MODE==='cruise'?'#00ffe7':'#b24bff';
+  ctx.font='bold '+Math.round(w*0.110)+'px "Share Tech Mono",monospace';ctx.fillStyle=mc;ctx.textAlign='center';
+  ctx.fillText(MODE.toUpperCase(),x+w/2,y+h*0.30);
+  ctx.fillStyle=mc+'2a';ctx.fillRect(x+w*0.14,y+h*0.37,w*0.72,1);
+  // Gear
+  var gear=inGame?Math.max(1,Math.min(6,Math.floor(speed*0.85)))+'':'P';
+  ctx.font='bold '+Math.round(w*0.26)+'px "Share Tech Mono",monospace';ctx.fillStyle='rgba(255,255,255,0.78)';ctx.textAlign='center';
+  ctx.fillText(gear,x+w/2,y+h*0.66);
+  ctx.font=Math.round(w*0.082)+'px "Share Tech Mono",monospace';ctx.fillStyle='rgba(255,255,255,0.20)';ctx.fillText('GEAR',x+w/2,y+h*0.80);
+}
+
+// ─── STEERING WHEEL ───────────────────────────────────────────────────────────
+function drawWheel(cx,cy,r){
+  ctx.save();ctx.translate(cx,cy);ctx.rotate(car.wheel*Math.PI/180);
+  // Shadow
+  ctx.shadowColor='rgba(0,0,0,0.92)';ctx.shadowBlur=r*0.40;ctx.shadowOffsetY=-r*0.03;
+  // Rim
+  ctx.strokeStyle='#090114';ctx.lineWidth=r*0.16;ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);ctx.stroke();
+  ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+  // Outer glow ring
+  ctx.strokeStyle='rgba(105,32,210,0.48)';ctx.lineWidth=r*0.016;ctx.beginPath();ctx.arc(0,0,r+r*0.038,0,Math.PI*2);ctx.stroke();
+  // Inner highlight
+  ctx.strokeStyle='rgba(140,55,245,0.26)';ctx.lineWidth=r*0.013;ctx.beginPath();ctx.arc(0,0,r-r*0.055,Math.PI*1.08,Math.PI*1.92);ctx.stroke();
+  // Grip texture
+  ctx.strokeStyle='rgba(65,18,110,0.52)';ctx.lineWidth=r*0.052;ctx.setLineDash([r*0.07,r*0.044]);
+  ctx.beginPath();ctx.arc(0,0,r,Math.PI*1.07,Math.PI*1.93);ctx.stroke();ctx.setLineDash([]);
+  // Spokes
+  ctx.fillStyle='#090114';
+  ctx.fillRect(-r*0.87,-r*0.074,r*1.74,r*0.148);
+  ctx.fillRect(-r*0.082,0,r*0.164,r*0.80);
+  // Brace triangles
+  ctx.save();ctx.globalAlpha=0.28;ctx.fillStyle='#100220';
+  ctx.beginPath();ctx.moveTo(-r*0.87,-r*0.074);ctx.lineTo(-r*0.54,-r*0.074);ctx.lineTo(-r*0.082,r*0.30);ctx.lineTo(-r*0.082,r*0.06);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.moveTo(r*0.87,-r*0.074);ctx.lineTo(r*0.54,-r*0.074);ctx.lineTo(r*0.082,r*0.30);ctx.lineTo(r*0.082,r*0.06);ctx.closePath();ctx.fill();
+  ctx.restore();
+  // Spoke highlight
+  ctx.fillStyle='rgba(105,38,195,0.20)';ctx.fillRect(-r*0.87,-r*0.008,r*1.74,r*0.016);ctx.fillRect(-r*0.008,0,r*0.016,r*0.80);
+  // Hub
+  var hg=ctx.createRadialGradient(0,-r*0.03,0,0,0,r*0.25);hg.addColorStop(0,'#280740');hg.addColorStop(0.6,'#140228');hg.addColorStop(1,'#05010c');
+  ctx.fillStyle=hg;ctx.beginPath();ctx.arc(0,0,r*0.25,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='rgba(255,45,120,0.58)';ctx.lineWidth=r*0.018;ctx.beginPath();ctx.arc(0,0,r*0.25,0,Math.PI*2);ctx.stroke();
+  // Airbag cover plate
+  var apW=r*0.34,apH=r*0.21;
+  ctx.fillStyle='#0e0120';rr(-apW/2,-apH/2,apW,apH,r*0.042);ctx.fill();
+  ctx.strokeStyle='rgba(120,45,225,0.38)';ctx.lineWidth=r*0.013;rr(-apW/2,-apH/2,apW,apH,r*0.042);ctx.stroke();
+  ctx.strokeStyle='rgba(120,45,225,0.20)';ctx.lineWidth=r*0.008;
+  ctx.beginPath();ctx.moveTo(-apW*0.38,0);ctx.lineTo(apW*0.38,0);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,-apH*0.32);ctx.lineTo(0,apH*0.32);ctx.stroke();
+  // Inner hub ring
+  ctx.strokeStyle='rgba(145,52,240,0.33)';ctx.lineWidth=r*0.012;ctx.beginPath();ctx.arc(0,0,r*0.14,0,Math.PI*2);ctx.stroke();
+  // Center dot
+  ctx.fillStyle='#ff2d78';ctx.beginPath();ctx.arc(0,0,r*0.048,0,Math.PI*2);ctx.fill();
+  ctx.restore();
+}
+
+// ─── MENU ─────────────────────────────────────────────────────────────────────
+document.getElementById('btn-cr').addEventListener('click',function(){
+  var m=document.getElementById('menu');m.style.opacity='0';
+  setTimeout(function(){m.style.display='none';},420);startGame('cruise');
+});
+document.getElementById('btn-ru').addEventListener('click',function(){
+  var m=document.getElementById('menu');m.style.opacity='0';
+  setTimeout(function(){m.style.display='none';},420);startGame('rush');
+});
+
+// ─── BOOT ─────────────────────────────────────────────────────────────────────
+initRoad();startGame('idle');
+lastTs=performance.now();requestAnimationFrame(loop);
+
 })();
 
+// ════════════════════════════════════════════════════════════════════════════════
+//  RADIO — full UTC manifest sync
+// ════════════════════════════════════════════════════════════════════════════════
+(function RADIO(){
+  window.radioIsOn=false;window.radioTrack='Tune in to Pumpo';window.radioToggle=toggle;
+  var MF='/radio-manifest.json',manifest=null,audio=null,seq=null,syncT=null,fbIdx=0;
+  var FB=[
+    {file:'https://radiopumpo.github.io/songs/pumpofantastique.mp3',   title:'Pumpo est Fantastique'},
+    {file:'https://radiopumpo.github.io/songs/pumpoelectrolatino.mp3', title:'Tirate un Pumpo'},
+    {file:'https://radiopumpo.github.io/songs/pumpophonkbr.mp3',       title:'A ora do Pumpo'},
+    {file:'https://radiopumpo.github.io/songs/housepumpo.mp3',         title:'House Pumpo'},
+    {file:'https://radiopumpo.github.io/songs/dnbpumpo.mp3',           title:'DNB Pumpo'},
+    {file:'https://radiopumpo.github.io/songs/pumponostalgiaphonk.mp3',title:'Pumpo Nostalgia Phonk'},
+    {file:'https://radiopumpo.github.io/songs/pumpophonkbr2.mp3',      title:'A ora do Pumpo Dois'}
+  ];
+  function utcS(){var n=new Date();return n.getUTCHours()*3600+n.getUTCMinutes()*60+n.getUTCSeconds();}
+  function dp(){var h=new Date().getUTCHours();return h>=6&&h<12?'breakfast':h>=12&&h<19?'afternoons':'latenight';}
+  function seed(){var d=new Date();return parseInt(''+d.getUTCFullYear()+(d.getUTCMonth()<9?'0':'')+(d.getUTCMonth()+1)+(d.getUTCDate()<10?'0':'')+d.getUTCDate());}
+  function shuf(arr,s){var a=arr.slice(),sd=s>>>0;function rn(){sd=(Math.imul(1664525,sd)+1013904223)>>>0;return sd/0x100000000;}for(var i=a.length-1;i>0;i--){var j=Math.floor(rn()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
+  function bSeq(){
+    var d=dp(),s=seed(),sf=manifest.scheduling.segment_frequency,sidf=manifest.scheduling.station_id_frequency;
+    var wrap=manifest.segments.show_wrappers,segs=manifest.segments[d],sids=manifest.segments.station_ids;
+    var pool=manifest.tracks.filter(function(t){return t.dayparts.indexOf(d)>=0;});
+    var sh=shuf(pool,s),out=[],tot=0,ti=0,segi=0,sidi=0,tc=0;
+    var intro=wrap[d+'_intro'];out.push({file:intro.file,dur:intro.duration,title:manifest.dayparts[d].label});tot+=intro.duration;
+    while(tot<86400){var tr=sh[ti%sh.length];out.push({file:tr.file,dur:tr.duration,title:tr.title});tot+=tr.duration;ti++;tc++;
+      if(tc%sf===0){var sg=segs[segi%segs.length];out.push({file:sg.file,dur:sg.duration,title:manifest.station.host});tot+=sg.duration;segi++;}
+      if(tc%sidf===0&&tc%sf!==0){var sid=sids[sidi%sids.length];out.push({file:sid.file,dur:sid.duration,title:'Radio Pumpo'});tot+=sid.duration;sidi++;}
+    }
+    return out;
+  }
+  function cPos(s){var t=utcS(),e=0;for(var i=0;i<s.length;i++){if(e+s[i].dur>t)return{item:s[i],pos:t-e};e+=s[i].dur;}return{item:s[0],pos:0};}
+  function ea(){if(!audio){audio=new Audio();audio.preload='auto';audio.addEventListener('ended',function(){if(window.radioIsOn){if(seq)pfp();else pfb();}});}}
+  function pfp(){var cp=cPos(seq);audio.src=cp.item.file;audio.currentTime=cp.pos;audio.play().catch(function(){});window.radioTrack=cp.item.title||'Radio Pumpo';}
+  function pfb(){var t=FB[fbIdx%FB.length];fbIdx++;audio.src=t.file;audio.play().catch(function(){});window.radioTrack=t.title;}
+  function sSync(){if(syncT)clearInterval(syncT);syncT=setInterval(function(){if(!window.radioIsOn||!seq)return;var cp=cPos(seq);var c=(audio.src||'').split('/').pop(),ex=(cp.item.file||'').split('/').pop();if(c!==ex)pfp();else if(Math.abs((audio.currentTime||0)-cp.pos)>8)audio.currentTime=cp.pos;},15000);}
+  function toggle(){ea();if(window.radioIsOn){window.radioIsOn=false;audio.pause();if(syncT){clearInterval(syncT);syncT=null;}window.radioTrack='Tuned out';return;}
+    window.radioIsOn=true;
+    if(manifest){seq=bSeq();pfp();sSync();}
+    else{fetch(MF).then(function(r){return r.ok?r.json():null;}).then(function(m){if(m){manifest=m;seq=bSeq();pfp();sSync();}else pfb();}).catch(function(){pfb();});}
+  }
+  fetch(MF).then(function(r){return r.ok?r.json():null;}).then(function(m){if(m)manifest=m;}).catch(function(){});
+})();
 </script>
 </body>
 </html>
