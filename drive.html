@@ -7,8 +7,8 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Share+Tech+Mono&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Rajdhani',sans-serif;user-select:none;-webkit-tap-highlight-color:transparent;}
-#c{display:block;position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Rajdhani',sans-serif;user-select:none;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;}
+#c{display:block;position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;-webkit-user-select:none;user-select:none;touch-action:none;}
 #sc{position:fixed;inset:0;z-index:20;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.07) 2px,rgba(0,0,0,0.07) 4px);}
 #hud{position:fixed;inset:0;z-index:15;pointer-events:none;}
 #near-miss{position:absolute;top:30%;left:50%;transform:translate(-50%,-50%);font-family:'Share Tech Mono',monospace;font-size:clamp(16px,4.5vw,28px);font-weight:700;color:#00ffe7;text-shadow:0 0 14px #00ffe7;letter-spacing:3px;opacity:0;transition:opacity 0.08s;white-space:nowrap;text-align:center;}
@@ -124,7 +124,7 @@ C.addEventListener('touchstart',function(e){
 C.addEventListener('touchmove',function(e){
   if(dragX0===null)return;
   var dx=e.touches[0].clientX-dragX0;
-  if(Math.abs(dx)>5)isDrag=true;
+  if(Math.abs(dx)>12)isDrag=true;
   if(isDrag&&inGame){
     var delta=e.touches[0].clientX-dragLast;
     dragLast=e.touches[0].clientX;
@@ -147,7 +147,7 @@ C.addEventListener('mousedown',function(e){dragX0=e.clientX;dragLast=dragX0;isDr
 C.addEventListener('mousemove',function(e){
   if(e.buttons&&dragX0!==null){
     var dx=e.clientX-dragX0;
-    if(Math.abs(dx)>5)isDrag=true;
+    if(Math.abs(dx)>12)isDrag=true;
     if(isDrag&&inGame){var d=e.clientX-dragLast;dragLast=e.clientX;car.laneX=Math.max(-1,Math.min(1,car.laneX+d*0.011));var nl=Math.round(car.laneX+1);car.lane=Math.max(0,Math.min(LANES-1,nl));car.wheelTgt=car.laneX*44;}
   }
 });
@@ -170,7 +170,7 @@ function initRoad(){
   road=[];
   for(var i=0;i<NSEGS;i++){
     var p=(i/NSEGS)*Math.PI*8;
-    road.push({c:Math.sin(p*0.55)*0.35+Math.sin(p*0.22)*0.18, alt:i%2});
+    road.push({c:Math.sin(p*0.55)*0.55+Math.sin(p*0.22)*0.28, alt:i%2});
   }
 }
 
@@ -210,10 +210,10 @@ function buildSegs(){
     var p=proj(depth);
     var idx=Math.floor(scroll+(NDRAW-1-n)*0.5)%NSEGS; // far segments = older scroll
     var seg=road[idx<0?idx+NSEGS:idx];
-    cx2+=seg.c*(1-depth)*0.32;
+    cx2+=seg.c*depth*0.55;
     // Camera pan fades to 0 at horizon (1-depth), full at camera (depth=1... wait, inverted)
     // depth=0 is horizon, depth=1 is near — pan should be FULL at near, fade at horizon
-    var cx=W/2+camPan*depth+cx2*W*0.038;
+    var cx=W/2-camPan*depth+cx2*W*0.038;
     _segs.push({seg:seg,y:p.y,l:cx-p.hw,r:cx+p.hw,hw:p.hw,cx:cx,depth:depth});
   }
 }
@@ -988,6 +988,17 @@ document.getElementById('btn-cr').addEventListener('click',function(){
 document.getElementById('btn-ru').addEventListener('click',function(){
   var m=document.getElementById('menu');m.style.opacity='0';
   setTimeout(function(){m.style.display='none';},420);startGame('rush');
+});
+
+// ─── RADIO BUTTON DIRECT HANDLER ─────────────────────────────────────────────
+// Fallback: direct click on canvas always checks radio bounds
+C.addEventListener('click', function(e){
+  var b=window._rBtn;
+  if(!b) return;
+  var cx=e.clientX*DPR, cy=e.clientY*DPR;
+  if(cx>=b.x&&cx<=b.x+b.w&&cy>=b.y&&cy<=b.y+b.h){
+    if(window.radioToggle) window.radioToggle();
+  }
 });
 
 // ─── BOOT ─────────────────────────────────────────────────────────────────────
